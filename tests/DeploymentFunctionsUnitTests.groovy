@@ -230,4 +230,104 @@ class DeploymentFunctionsUnitTests extends Specification {
         then:
         assert thrown(NullPointerException)
     }
+
+    // ============================================================================
+    // Tests for runAnsiblePlaybook()
+    // ============================================================================
+
+    void testRunAnsiblePlaybookExecutesWithParameters() {
+        given:
+        String ansibleRepoPath = '/etc/ansible'
+        String playbookName = 'deploy.yml'
+        Map parameters = [env: 'staging', version: '1.0.0']
+
+        when:
+        deploymentFunctions.runAnsiblePlaybook(ansibleRepoPath, playbookName, parameters)
+
+        then:
+        assert noExceptionThrown() != null
+    }
+
+    void testRunAnsiblePlaybookHandlesEmptyParameterMap() {
+        given:
+        String ansibleRepoPath = '/etc/ansible'
+        String playbookName = 'health-check.yml'
+        Map parameters = [:]
+
+        when:
+        deploymentFunctions.runAnsiblePlaybook(ansibleRepoPath, playbookName, parameters)
+
+        then:
+        assert noExceptionThrown() != null
+    }
+
+    void testRunAnsiblePlaybookHandlesVariousParameterTypes() {
+        given:
+        String ansibleRepoPath = '/opt/ansible'
+        String playbookName = 'configure.yml'
+        Map parameters = [
+            debug      : true,
+            retries    : 3,
+            timeout    : 300,
+            hosts      : 'all',
+            tags       : ['setup', 'deploy']
+        ]
+
+        when:
+        deploymentFunctions.runAnsiblePlaybook(ansibleRepoPath, playbookName, parameters)
+
+        then:
+        assert noExceptionThrown() != null
+    }
+
+    void testRunAnsiblePlaybookThrowsExceptionForEmptyAnsibleRepoPath() {
+        given:
+        String ansibleRepoPath = ''
+        String playbookName = 'deploy.yml'
+        Map parameters = [:]
+
+        when:
+        deploymentFunctions.runAnsiblePlaybook(ansibleRepoPath, playbookName, parameters)
+
+        then:
+        assert thrown(IllegalArgumentException)
+    }
+
+    void testRunAnsiblePlaybookThrowsExceptionForEmptyPlaybookName() {
+        given:
+        String ansibleRepoPath = '/etc/ansible'
+        String playbookName = ''
+        Map parameters = [:]
+
+        when:
+        deploymentFunctions.runAnsiblePlaybook(ansibleRepoPath, playbookName, parameters)
+
+        then:
+        assert thrown(IllegalArgumentException)
+    }
+
+    void testRunAnsiblePlaybookThrowsExceptionForNullParametersMap() {
+        given:
+        String ansibleRepoPath = '/etc/ansible'
+        String playbookName = 'deploy.yml'
+
+        when:
+        deploymentFunctions.runAnsiblePlaybook(ansibleRepoPath, playbookName, null)
+
+        then:
+        assert thrown(NullPointerException)
+    }
+
+    void testRunAnsiblePlaybookValidatesPlaybookFileExists() {
+        given:
+        String ansibleRepoPath = '/etc/ansible'
+        String playbookName = 'non-existent.yml'
+        Map parameters = [:]
+
+        when:
+        deploymentFunctions.runAnsiblePlaybook(ansibleRepoPath, playbookName, parameters)
+
+        then:
+        assert thrown(FileNotFoundException)
+    }
 }
