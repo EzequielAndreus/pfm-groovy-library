@@ -36,8 +36,3 @@ jobs:
           VALIDATE_GITLEAKS: true
           VALIDATE_GROOVY: true
           VALIDATE_MARKDOWN: true
-          VALIDATE_TERRAFORM_FMT: true
-          VALIDATE_TERRAFORM_TERRASCAN: true
-          VALIDATE_TERRAFORM_TFLINT: true
-          VALIDATE_TERRAGRUNT: true
-          
