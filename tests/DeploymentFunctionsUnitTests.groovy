@@ -246,67 +246,37 @@ class DeploymentFunctionsUnitTests extends Specification {
     // Tests for performHealthCheck()
     // ============================================================================
 
-    void testPerformHealthCheckReturnsTrue() {
-        given:
-        String instanceName = 'app-server-01'
-
-        when:
+    @Unroll
+    void testPerformHealthCheck(String instanceName, Boolean expectedResult) {
+        when: 'performing health check on instance'
         boolean result = deploymentFunctions.performHealthCheck(instanceName)
 
-        then:
-        assert result == true
-    }
-
-    void testPerformHealthCheckReturnsFalse() {
-        given:
-        String instanceName = 'app-server-02'
-
-        when:
-        boolean result = deploymentFunctions.performHealthCheck(instanceName)
-
-        then:
-        assert result == false
-    }
-
-    void testPerformHealthCheckHandlesIpAddresses() {
-        given:
-        String instanceName = '10.0.1.50'
-
-        when:
-        boolean result = deploymentFunctions.performHealthCheck(instanceName)
-
-        then:
+        then: 'the result matches expectations or is a boolean type'
+        if (expectedResult != null) {
+            assert result == expectedResult
+        }
         assert result instanceof Boolean
+
+        where:
+        instanceName   | expectedResult
+        APP_SERVER_01  | true
+        APP_SERVER_02  | false
+        PRIVATE_IP     | null  // Just check it returns Boolean
+        DNS_NAME       | null  // Just check it returns Boolean
     }
 
-    void testPerformHealthCheckHandlesDnsNames() {
-        given:
-        String instanceName = 'app.example.com'
+    @Unroll
+    void testPerformHealthCheckThrowsExceptions(Closure action, Class<? extends Exception> expectedExceptionType) {
+        when: 'calling performHealthCheck with invalid parameters'
+        action.call()
 
-        when:
-        boolean result = deploymentFunctions.performHealthCheck(instanceName)
+        then: 'the expected exception is thrown'
+        thrown(expectedExceptionType)
 
-        then:
-        assert result instanceof Boolean
-    }
-
-    void testPerformHealthCheckThrowsExceptionForEmptyInstanceName() {
-        given:
-        String instanceName = ''
-
-        when:
-        deploymentFunctions.performHealthCheck(instanceName)
-
-        then:
-        assert thrown(IllegalArgumentException)
-    }
-
-    void testPerformHealthCheckThrowsExceptionForNullInstanceName() {
-        when:
-        deploymentFunctions.performHealthCheck(null)
-
-        then:
-        assert thrown(NullPointerException)
+        where:
+        action                                            | expectedExceptionType
+        { deploymentFunctions.performHealthCheck('') }   | IllegalArgumentException
+        { deploymentFunctions.performHealthCheck(null) } | NullPointerException
     }
 
     // ============================================================================
