@@ -283,107 +283,43 @@ class DeploymentFunctionsUnitTests extends Specification {
     // Tests for tagImageForEnvironment()
     // ============================================================================
 
-    void testTagImageForEnvironmentStagingEnvironment() {
-        given:
-        String imageId = 'myrepo/myimage:1.0.0'
-        String environment = 'staging'
-
-        when:
-        deploymentFunctions.tagImageForEnvironment(imageId, environment)
-
-        then:
-        assert noExceptionThrown() != null
-    }
-
-    void testTagImageForEnvironmentProductionEnvironment() {
-        given:
-        String imageId = 'myrepo/myimage:1.0.0'
-        String environment = 'production'
-
-        when:
-        deploymentFunctions.tagImageForEnvironment(imageId, environment)
-
-        then:
-        assert noExceptionThrown() != null
-    }
-
     @Unroll
-    void testTagImageForEnvironmentSupportsEnvironment(String environment) {
-        given:
-        String imageId = 'registry/image:latest'
+    void testTagImageForEnvironmentExecutesSuccessfully(String imageId, String environment) {
+        given: 'a valid Docker image and environment'
+        // Image ID and environment are provided
 
-        when:
+        when: 'tagging the image for the environment'
         deploymentFunctions.tagImageForEnvironment(imageId, environment)
 
-        then:
+        then: 'no exception is thrown'
         noExceptionThrown()
 
         where:
-        environment << ['development', 'staging', 'production', 'test']
+        imageId         | environment
+        DOCKER_IMAGE    | STAGING_ENV
+        DOCKER_IMAGE    | PRODUCTION_ENV
+        REGISTRY_IMAGE  | DEVELOPMENT_ENV
+        REGISTRY_IMAGE  | STAGING_ENV
+        REGISTRY_IMAGE  | PRODUCTION_ENV
+        REGISTRY_IMAGE  | TEST_ENV
+        SHA256_IMAGE    | PRODUCTION_ENV
     }
 
-    void testTagImageForEnvironmentHandlesImageIdsWithSHA256Digest() {
-        given:
-        String imageId = 'myrepo/myimage@sha256:abc123def456'
-        String environment = 'production'
+    @Unroll
+    void testTagImageForEnvironmentThrowsExceptions(Closure action, Class<? extends Exception> expectedExceptionType) {
+        when: 'calling tagImageForEnvironment with invalid parameters'
+        action.call()
 
-        when:
-        deploymentFunctions.tagImageForEnvironment(imageId, environment)
+        then: 'the expected exception is thrown'
+        thrown(expectedExceptionType)
 
-        then:
-        assert noExceptionThrown() != null
-    }
-
-    void testTagImageForEnvironmentThrowsExceptionForEmptyImageId() {
-        given:
-        String imageId = ''
-        String environment = 'staging'
-
-        when:
-        deploymentFunctions.tagImageForEnvironment(imageId, environment)
-
-        then:
-        assert thrown(IllegalArgumentException)
-    }
-
-    void testTagImageForEnvironmentThrowsExceptionForEmptyEnvironment() {
-        given:
-        String imageId = 'myrepo/myimage:1.0.0'
-        String environment = ''
-
-        when:
-        deploymentFunctions.tagImageForEnvironment(imageId, environment)
-
-        then:
-        assert thrown(IllegalArgumentException)
-    }
-
-    void testTagImageForEnvironmentThrowsExceptionForInvalidEnvironment() {
-        given:
-        String imageId = 'myrepo/myimage:1.0.0'
-        String environment = 'invalid-env'
-
-        when:
-        deploymentFunctions.tagImageForEnvironment(imageId, environment)
-
-        then:
-        assert thrown(IllegalArgumentException)
-    }
-
-    void testTagImageForEnvironmentThrowsExceptionForNullImageId() {
-        when:
-        deploymentFunctions.tagImageForEnvironment(null, 'staging')
-
-        then:
-        assert thrown(NullPointerException)
-    }
-
-    void testTagImageForEnvironmentThrowsExceptionForNullEnvironment() {
-        when:
-        deploymentFunctions.tagImageForEnvironment('myrepo/myimage:1.0.0', null)
-
-        then:
-        assert thrown(NullPointerException)
+        where:
+        action                                                                      | expectedExceptionType
+        { deploymentFunctions.tagImageForEnvironment('', STAGING_ENV) }            | IllegalArgumentException
+        { deploymentFunctions.tagImageForEnvironment(DOCKER_IMAGE, '') }           | IllegalArgumentException
+        { deploymentFunctions.tagImageForEnvironment(DOCKER_IMAGE, INVALID_ENV) }  | IllegalArgumentException
+        { deploymentFunctions.tagImageForEnvironment(null, STAGING_ENV) }          | NullPointerException
+        { deploymentFunctions.tagImageForEnvironment(DOCKER_IMAGE, null) }         | NullPointerException
     }
 
 }
