@@ -397,4 +397,112 @@ class DeploymentFunctionsUnitTests extends Specification {
         then:
         assert thrown(NullPointerException)
     }
+
+    // ============================================================================
+    // Tests for tagImageForEnvironment()
+    // ============================================================================
+
+    void testTagImageForEnvironmentStagingEnvironment() {
+        given:
+        String imageId = 'myrepo/myimage:1.0.0'
+        String environment = 'staging'
+
+        when:
+        deploymentFunctions.tagImageForEnvironment(imageId, environment)
+
+        then:
+        assert noExceptionThrown() != null
+    }
+
+    void testTagImageForEnvironmentProductionEnvironment() {
+        given:
+        String imageId = 'myrepo/myimage:1.0.0'
+        String environment = 'production'
+
+        when:
+        deploymentFunctions.tagImageForEnvironment(imageId, environment)
+
+        then:
+        assert noExceptionThrown() != null
+    }
+
+    @Unroll
+    void testTagImageForEnvironmentSupportsEnvironment(String environment) {
+        given:
+        String imageId = 'registry/image:latest'
+
+        when:
+        deploymentFunctions.tagImageForEnvironment(imageId, environment)
+
+        then:
+        noExceptionThrown()
+
+        where:
+        environment << ['development', 'staging', 'production', 'test']
+    }
+
+    void testTagImageForEnvironmentHandlesImageIdsWithSHA256Digest() {
+        given:
+        String imageId = 'myrepo/myimage@sha256:abc123def456'
+        String environment = 'production'
+
+        when:
+        deploymentFunctions.tagImageForEnvironment(imageId, environment)
+
+        then:
+        assert noExceptionThrown() != null
+    }
+
+    void testTagImageForEnvironmentThrowsExceptionForEmptyImageId() {
+        given:
+        String imageId = ''
+        String environment = 'staging'
+
+        when:
+        deploymentFunctions.tagImageForEnvironment(imageId, environment)
+
+        then:
+        assert thrown(IllegalArgumentException)
+    }
+
+    void testTagImageForEnvironmentThrowsExceptionForEmptyEnvironment() {
+        given:
+        String imageId = 'myrepo/myimage:1.0.0'
+        String environment = ''
+
+        when:
+        deploymentFunctions.tagImageForEnvironment(imageId, environment)
+
+        then:
+        assert thrown(IllegalArgumentException)
+    }
+
+    void testTagImageForEnvironmentThrowsExceptionForInvalidEnvironment() {
+        given:
+        String imageId = 'myrepo/myimage:1.0.0'
+        String environment = 'invalid-env'
+
+        when:
+        deploymentFunctions.tagImageForEnvironment(imageId, environment)
+
+        then:
+        assert thrown(IllegalArgumentException)
+    }
+
+    void testTagImageForEnvironmentThrowsExceptionForNullImageId() {
+        when:
+        deploymentFunctions.tagImageForEnvironment(null, 'staging')
+
+        then:
+        assert thrown(NullPointerException)
+    }
+
+    void testTagImageForEnvironmentThrowsExceptionForNullEnvironment() {
+        when:
+        deploymentFunctions.tagImageForEnvironment('myrepo/myimage:1.0.0', null)
+
+        then:
+        assert thrown(NullPointerException)
+    }
+
 }
