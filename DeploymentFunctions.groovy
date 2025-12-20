@@ -10,10 +10,12 @@ def buildAndTagImage(String repositoryUrl, String branch) {
 }
 
 /**
- * Updates AWS Auto Scaling Groups by increasing instance count.
+ * Updates an AWS Auto Scaling Group by increasing its desired capacity.
+ * Increases the current desired capacity by the specified number of instances
+ * without modifying the group's minimum or maximum capacity settings.
  *
  * @param asgName The name of the Auto Scaling Group
- * @param instanceCount The number of instances to add
+ * @param instanceCount The number of instances to add to the current desired capacity
  */
 def updateAwsAsg(String asgName, Integer instanceCount) {
 }
