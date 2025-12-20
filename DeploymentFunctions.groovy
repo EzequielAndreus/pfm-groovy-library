@@ -16,23 +16,23 @@ def buildAndTagImage(String repositoryUrl, String branch) {
  *
  * @param asgName The name of the Auto Scaling Group
  * @param instanceCount The number of instances to add to the current desired capacity
+ * @return status of the update operation
  */
 def updateAwsAsg(String asgName, Integer instanceCount) {
 }
 
 /**
- * Validates that a stage is up and running.
+ * Validates that a stage is accessible and ready to receive traffic.
  * Performs ping checks and verifies SSH port accessibility.
  *
- * @param stageName The name/IP of the stage to validate
- * @return true if stage is healthy, false otherwise
+ * @param instanceAddress IP address of the instance to check
+ * @return true if stage is accessible, false otherwise
  */
-def validateStageIsUp(String stageName) {
+def validateStageIsUp(String instanceAddress) {
 }
 
 /**
- * Runs an Ansible playbook for configuration management.
- * Pulls latest changes and executes the playbook with specified parameters.
+ * Executes an Ansible playbook with specified parameters.
  *
  * @param ansibleRepoPath The path to the Ansible repository
  * @param playbookName The name of the playbook to run
@@ -44,10 +44,10 @@ def runAnsiblePlaybook(String ansibleRepoPath, String playbookName, Map paramete
 /**
  * Performs a health check on the application running in a specified instance.
  *
- * @param instanceName The name/IP of the instance to check
+ * @param instanceAddress IP address of the instance to check
  * @return true if health check passes, false otherwise
  */
-def performHealthCheck(String instanceName) {
+def performHealthCheck(String instanceAddress) {
 }
 
 /**
@@ -55,6 +55,7 @@ def performHealthCheck(String instanceName) {
  *
  * @param imageId The ID or name of the image to tag
  * @param environment The target environment ('staging' or 'production')
+ * @return true if tagging is successful, false otherwise
  */
 def tagImageForEnvironment(String imageId, String environment) {
 }
