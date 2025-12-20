@@ -129,75 +129,40 @@ class DeploymentFunctionsUnitTests extends Specification {
     // Tests for updateAwsAsg()
     // ============================================================================
 
-    void testUpdateAwsAsgSuccessfully() {
-        given:
-        String asgName = 'production-asg-web'
-        Integer instanceCount = 3
-
-        when:
-        deploymentFunctions.updateAwsAsg(asgName, instanceCount)
-
-        then:
-        assert noExceptionThrown() != null
-    }
-
     @Unroll
-    void testUpdateAwsAsgHandlesDifferentInstanceCounts(Integer instanceCount) {
-        given:
-        String asgName = 'prod-asg'
+    void testUpdateAwsAsgValidScenarios(String asgName, Integer instanceCount) {
+        given: 'a valid ASG configuration'
+        // ASG name and instance count are provided
 
-        when:
+        when: 'updating the ASG'
         deploymentFunctions.updateAwsAsg(asgName, instanceCount)
 
-        then:
+        then: 'no exception is thrown'
         noExceptionThrown()
 
         where:
-        instanceCount << [1, 5, 10, 25]
+        asgName         | instanceCount
+        PRODUCTION_ASG  | 3
+        PROD_ASG        | 1
+        PROD_ASG        | 5
+        PROD_ASG        | 10
+        PROD_ASG        | 25
     }
 
-    void testUpdateAwsAsgThrowsExceptionForNegativeInstanceCount() {
-        given:
-        String asgName = 'prod-asg'
-        Integer instanceCount = -1
+    @Unroll
+    void testUpdateAwsAsgThrowsExceptions(Closure action, Class<? extends Exception> expectedExceptionType) {
+        when: 'calling updateAwsAsg with invalid parameters'
+        action.call()
 
-        when:
-        deploymentFunctions.updateAwsAsg(asgName, instanceCount)
+        then: 'the expected exception is thrown'
+        thrown(expectedExceptionType)
 
-        then:
-        assert thrown(IllegalArgumentException)
-    }
-
-    void testUpdateAwsAsgThrowsExceptionForZeroInstanceCount() {
-        given:
-        String asgName = 'prod-asg'
-        Integer instanceCount = 0
-
-        when:
-        deploymentFunctions.updateAwsAsg(asgName, instanceCount)
-
-        then:
-        assert thrown(IllegalArgumentException)
-    }
-
-    void testUpdateAwsAsgThrowsExceptionForEmptyAsgName() {
-        given:
-        String asgName = ''
-        Integer instanceCount = 2
-
-        when:
-        deploymentFunctions.updateAwsAsg(asgName, instanceCount)
-
-        then:
-        assert thrown(IllegalArgumentException)
-    }
-
-    void testUpdateAwsAsgThrowsExceptionForNullAsgName() {
-        when:
-        deploymentFunctions.updateAwsAsg(null, 2)
-
-        then:
-        assert thrown(NullPointerException)
+        where:
+        action                                             | expectedExceptionType
+        { deploymentFunctions.updateAwsAsg(PROD_ASG, -1) } | IllegalArgumentException
+        { deploymentFunctions.updateAwsAsg(PROD_ASG, 0) }  | IllegalArgumentException
+        { deploymentFunctions.updateAwsAsg('', 2) }        | IllegalArgumentException
+        { deploymentFunctions.updateAwsAsg(null, 2) }      | NullPointerException
     }
 
     // ============================================================================
