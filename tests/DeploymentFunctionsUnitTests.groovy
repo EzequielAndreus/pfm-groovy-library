@@ -169,56 +169,36 @@ class DeploymentFunctionsUnitTests extends Specification {
     // Tests for validateStageIsUp()
     // ============================================================================
 
-    void testValidateStageIsUpReturnsTrue() {
-        given:
-        String stageName = 'staging-01'
-
-        when:
+    @Unroll
+    void testValidateStageIsUp(String stageName, Boolean expectedResult) {
+        when: 'validating if stage is up'
         boolean result = deploymentFunctions.validateStageIsUp(stageName)
 
-        then:
-        assert result == true
-    }
-
-    void testValidateStageIsUpReturnsFalse() {
-        given:
-        String stageName = 'staging-02'
-
-        when:
-        boolean result = deploymentFunctions.validateStageIsUp(stageName)
-
-        then:
-        assert result == false
-    }
-
-    void testValidateStageIsUpHandlesIpAddresses() {
-        given:
-        String stageName = '192.168.1.100'
-
-        when:
-        boolean result = deploymentFunctions.validateStageIsUp(stageName)
-
-        then:
+        then: 'the result matches expectations or is a boolean type'
+        if (expectedResult != null) {
+            assert result == expectedResult
+        }
         assert result instanceof Boolean
+
+        where:
+        stageName   | expectedResult
+        STAGING_01  | true
+        STAGING_02  | false
+        IP_ADDRESS  | null  // Just check it returns Boolean
     }
 
-    void testValidateStageIsUpThrowsExceptionForEmptyStageName() {
-        given:
-        String stageName = ''
+    @Unroll
+    void testValidateStageIsUpThrowsExceptions(Closure action, Class<? extends Exception> expectedExceptionType) {
+        when: 'calling validateStageIsUp with invalid parameters'
+        action.call()
 
-        when:
-        deploymentFunctions.validateStageIsUp(stageName)
+        then: 'the expected exception is thrown'
+        thrown(expectedExceptionType)
 
-        then:
-        assert thrown(IllegalArgumentException)
-    }
-
-    void testValidateStageIsUpThrowsExceptionForNullStageName() {
-        when:
-        deploymentFunctions.validateStageIsUp(null)
-
-        then:
-        assert thrown(NullPointerException)
+        where:
+        action                                            | expectedExceptionType
+        { deploymentFunctions.validateStageIsUp('') }    | IllegalArgumentException
+        { deploymentFunctions.validateStageIsUp(null) }  | NullPointerException
     }
 
     // ============================================================================
