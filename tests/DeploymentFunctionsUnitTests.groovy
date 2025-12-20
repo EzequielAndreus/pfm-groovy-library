@@ -19,4 +19,9 @@ import spock.lang.Unroll
  */
 class DeploymentFunctionsUnitTests extends Specification {
 
+    private DeploymentFunctions deploymentFunctions
+
+    void setup() {
+        deploymentFunctions = new DeploymentFunctions()
+    }
 }
