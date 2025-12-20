@@ -98,8 +98,8 @@ class DeploymentFunctionsUnitTests extends Specification {
     // Tests for buildAndTagImage()
     // ============================================================================
 
-    @Unroll
-    void testBuildAndTagImageReturnsValidCommitHash(String repositoryUrl, String branch) {
+    @Unroll('#repositoryUrl with branch #branch should return valid commit hash')
+    void testBuildAndTagImage(String repositoryUrl, String branch) {
         expect: 'buildAndTagImage returns a valid SHA-1 commit hash'
         String result = deploymentFunctions.buildAndTagImage(repositoryUrl, branch)
         assertValidCommitHash(result)
@@ -111,7 +111,7 @@ class DeploymentFunctionsUnitTests extends Specification {
         HTTPS_REPO_URL  | FEATURE_BRANCH
     }
 
-    @Unroll
+    @Unroll('#repositoryUrl with branch #branch should throw exception')
     void testBuildAndTagImageThrowsExceptions(Closure action, Class<? extends Exception> expectedExceptionType) {
         when:
         action.call()
@@ -130,7 +130,7 @@ class DeploymentFunctionsUnitTests extends Specification {
     // Tests for updateAwsAsg()
     // ============================================================================
 
-    @Unroll
+    @Unroll('Updating ASG #asgName to #instanceCount instances should succeed')
     void testUpdateAwsAsgValidScenarios(String asgName, Integer instanceCount) {
         given: 'a valid ASG configuration'
         // ASG name and instance count are provided
@@ -150,7 +150,7 @@ class DeploymentFunctionsUnitTests extends Specification {
         PROD_ASG        | 25
     }
 
-    @Unroll
+    @Unroll('Updating ASG with invalid parameters should throw exception')
     void testUpdateAwsAsgThrowsExceptions(Closure action, Class<? extends Exception> expectedExceptionType) {
         when: 'calling updateAwsAsg with invalid parameters'
         action.call()
@@ -170,7 +170,7 @@ class DeploymentFunctionsUnitTests extends Specification {
     // Tests for validateStageIsUp()
     // ============================================================================
 
-    @Unroll
+    @Unroll('Validating if stage #stageName is up should return #expectedResult')
     void testValidateStageIsUp(String stageName, Boolean expectedResult) {
         when: 'validating if stage is up'
         boolean result = deploymentFunctions.validateStageIsUp(stageName)
@@ -187,7 +187,7 @@ class DeploymentFunctionsUnitTests extends Specification {
         IP_ADDRESS  | null  // No specific expectation; result may be true or false
     }
 
-    @Unroll
+    @Unroll('Validating if stage with invalid parameters should throw exception')
     void testValidateStageIsUpThrowsExceptions(Closure action, Class<? extends Exception> expectedExceptionType) {
         when: 'calling validateStageIsUp with invalid parameters'
         action.call()
@@ -205,7 +205,7 @@ class DeploymentFunctionsUnitTests extends Specification {
     // Tests for runAnsiblePlaybook()
     // ============================================================================
 
-    @Unroll
+    @Unroll('Running Ansible playbook #playbook with parameters should execute successfully')
     void testRunAnsiblePlaybookExecutesSuccessfully(String ansiblePath, String playbook, Map parameters) {
         given: 'valid Ansible playbook parameters'
         // Parameters are provided via the where block
@@ -226,7 +226,7 @@ class DeploymentFunctionsUnitTests extends Specification {
                                                        .withTags(['setup', 'deploy']).build()
     }
 
-    @Unroll
+    @Unroll('Running Ansible playbook with invalid parameters should throw exception')
     void testRunAnsiblePlaybookThrowsExceptions(Closure action, Class<? extends Exception> expectedExceptionType) {
         when: 'calling runAnsiblePlaybook with invalid parameters'
         action.call()
@@ -246,7 +246,7 @@ class DeploymentFunctionsUnitTests extends Specification {
     // Tests for performHealthCheck()
     // ============================================================================
 
-    @Unroll
+    @Unroll('Performing health check on instance #instanceName should return #expectedResult')
     void testPerformHealthCheck(String instanceName, Boolean expectedResult) {
         when: 'performing health check on instance'
         boolean result = deploymentFunctions.performHealthCheck(instanceName)
@@ -264,7 +264,7 @@ class DeploymentFunctionsUnitTests extends Specification {
         DNS_NAME       | null  // Just check it returns Boolean
     }
 
-    @Unroll
+    @Unroll('Performing health check with invalid parameters should throw exception')
     void testPerformHealthCheckThrowsExceptions(Closure action, Class<? extends Exception> expectedExceptionType) {
         when: 'calling performHealthCheck with invalid parameters'
         action.call()
@@ -282,7 +282,7 @@ class DeploymentFunctionsUnitTests extends Specification {
     // Tests for tagImageForEnvironment()
     // ============================================================================
 
-    @Unroll
+    @Unroll('Tagging image #imageId for environment #environment should execute successfully')
     void testTagImageForEnvironmentExecutesSuccessfully(String imageId, String environment) {
         given: 'a valid Docker image and environment'
         // Image ID and environment are provided
@@ -304,7 +304,7 @@ class DeploymentFunctionsUnitTests extends Specification {
         SHA256_IMAGE    | PRODUCTION_ENV
     }
 
-    @Unroll
+    @Unroll('Tagging image with invalid parameters should throw exception')
     void testTagImageForEnvironmentThrowsExceptions(Closure action, Class<? extends Exception> expectedExceptionType) {
         when: 'calling tagImageForEnvironment with invalid parameters'
         action.call()
