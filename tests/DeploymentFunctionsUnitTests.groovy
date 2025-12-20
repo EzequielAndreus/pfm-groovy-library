@@ -330,4 +330,71 @@ class DeploymentFunctionsUnitTests extends Specification {
         then:
         assert thrown(FileNotFoundException)
     }
+
+    // ============================================================================
+    // Tests for performHealthCheck()
+    // ============================================================================
+
+    void testPerformHealthCheckReturnsTrue() {
+        given:
+        String instanceName = 'app-server-01'
+
+        when:
+        boolean result = deploymentFunctions.performHealthCheck(instanceName)
+
+        then:
+        assert result == true
+    }
+
+    void testPerformHealthCheckReturnsFalse() {
+        given:
+        String instanceName = 'app-server-02'
+
+        when:
+        boolean result = deploymentFunctions.performHealthCheck(instanceName)
+
+        then:
+        assert result == false
+    }
+
+    void testPerformHealthCheckHandlesIpAddresses() {
+        given:
+        String instanceName = '10.0.1.50'
+
+        when:
+        boolean result = deploymentFunctions.performHealthCheck(instanceName)
+
+        then:
+        assert result instanceof Boolean
+    }
+
+    void testPerformHealthCheckHandlesDnsNames() {
+        given:
+        String instanceName = 'app.example.com'
+
+        when:
+        boolean result = deploymentFunctions.performHealthCheck(instanceName)
+
+        then:
+        assert result instanceof Boolean
+    }
+
+    void testPerformHealthCheckThrowsExceptionForEmptyInstanceName() {
+        given:
+        String instanceName = ''
+
+        when:
+        deploymentFunctions.performHealthCheck(instanceName)
+
+        then:
+        assert thrown(IllegalArgumentException)
+    }
+
+    void testPerformHealthCheckThrowsExceptionForNullInstanceName() {
+        when:
+        deploymentFunctions.performHealthCheck(null)
+
+        then:
+        assert thrown(NullPointerException)
+    }
 }
