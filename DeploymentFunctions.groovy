@@ -44,3 +44,60 @@ String prepareDockerImage(String repositoryUrl, String branch, String imageName)
         sh "rm -rf ${workDir}"
     }
 }
+
+/**
+ * Updates an AWS Auto Scaling Group by increasing its desired capacity.
+ * Increases the current desired capacity by the specified number of instances
+ * without modifying the group's minimum or maximum capacity settings.
+ *
+ * Note: Requires AWS CLI to be configured with appropriate credentials (IAM role or profile).
+ *
+ * @param asgName The name of the Auto Scaling Group (required)
+ * @param instanceCount The number of instances to add to the current desired capacity (must be > 0)
+ * @return true if update is successful, false otherwise
+ * @throws IllegalArgumentException if parameters are invalid
+ */
+boolean updateAwsAsg(String asgName, Integer instanceCount) {
+    // Input validation
+    if (!asgName?.trim()) {
+        throw new IllegalArgumentException('ASG name cannot be null or empty')
+    }
+    if (instanceCount == null || instanceCount <= 0) {
+        throw new IllegalArgumentException('Instance count must be greater than 0')
+    }
+
+    try {
+        // Get current desired capacity
+        Integer currentCapacity = sh(
+            script: 'aws autoscaling describe-auto-scaling-groups ' +
+                    "--auto-scaling-group-names ${asgName} " +
+                    "--query 'AutoScalingGroups[0].DesiredCapacity' " +
+                    '--output text',
+            returnStdout: true
+        ).trim().toInteger()
+
+        // Calculate new desired capacity
+        Integer newCapacity = currentCapacity + instanceCount
+
+        // Get the maximum capacity of the ASG
+        Integer maxCapacity = sh(
+            script: "aws autoscaling describe-auto-scaling-groups --auto-scaling-group-names ${asgName} " +
+                    "--query 'AutoScalingGroups[0].MaxSize' --output text",
+            returnStdout: true
+        ).trim().toInteger()
+
+        if (newCapacity > maxCapacity) {
+            throw new IllegalArgumentException("New capacity ${newCapacity} exceeds maximum ${maxCapacity}")
+        }
+
+        echo "Updating ASG '${asgName}' from ${currentCapacity} to ${newCapacity} instances"
+
+        // Update the Auto Scaling Group
+        sh "aws autoscaling set-desired-capacity --auto-scaling-group-name ${asgName} --desired-capacity ${newCapacity}"
+
+        echo "Successfully updated ASG '${asgName}' desired capacity to ${newCapacity}"
+        return true
+    } catch (IOException | InterruptedException e) {
+        error "Failed to update ASG '${asgName}': ${e.message}"
+    }
+}
