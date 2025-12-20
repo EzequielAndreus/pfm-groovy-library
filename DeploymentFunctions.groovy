@@ -101,3 +101,53 @@ boolean updateAwsAsg(String asgName, Integer instanceCount) {
         error "Failed to update ASG '${asgName}': ${e.message}"
     }
 }
+
+/**
+ * Validates that a stage is accessible and ready to receive traffic.
+ * Performs ping checks and verifies SSH port accessibility.
+ *
+ * @param instanceAddress IP address or hostname of the instance to check (required)
+ * @return true if stage is accessible, false otherwise
+ * @throws IllegalArgumentException if instanceAddress is null or empty
+ */
+boolean validateStageIsUp(String instanceAddress) {
+    // Input validation
+    if (!instanceAddress?.trim()) {
+        throw new IllegalArgumentException('Instance address cannot be null or empty')
+    }
+
+    try {
+        echo "Validating stage at ${instanceAddress}"
+
+        // Perform ping check (send 3 pings)
+        Integer pingResult = sh(
+            script: "ping -c 3 ${instanceAddress}",
+            returnStatus: true
+        )
+
+        if (pingResult) {
+            echo "Ping check failed for ${instanceAddress}"
+            return false
+        }
+
+        echo "Ping check passed for ${instanceAddress}"
+
+        // Check SSH port (22) accessibility
+        Integer sshResult = sh(
+            script: "nc -zv -w 5 ${instanceAddress} 22",
+            returnStatus: true
+        )
+
+        if (sshResult) {
+            echo "SSH port check failed for ${instanceAddress}"
+            return false
+        }
+
+        echo "SSH port check passed for ${instanceAddress}"
+        echo "Stage ${instanceAddress} is up and accessible"
+        return true
+    } catch (IOException | InterruptedException e) {
+        echo "Error validating stage: ${e.message}"
+        return false
+    }
+}
