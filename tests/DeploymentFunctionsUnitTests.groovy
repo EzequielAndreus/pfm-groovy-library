@@ -19,6 +19,60 @@ import spock.lang.Unroll
  */
 class DeploymentFunctionsUnitTests extends Specification {
 
+    // ============================================================================
+    // Git/Repository Constants
+    // ============================================================================
+    private static final String HTTPS_REPO_URL = 'https://github.com/user/repo.git'
+    private static final String SSH_REPO_URL = 'git@github.com:user/repo.git'
+    private static final String MAIN_BRANCH = 'main'
+    private static final String DEVELOP_BRANCH = 'develop'
+    private static final String FEATURE_BRANCH = 'feature/new-feature'
+    private static final String SHA1_REGEX = '[a-f0-9]{40}'
+    private static final int COMMIT_HASH_LENGTH = 40
+
+    // ============================================================================
+    // AWS Constants
+    // ============================================================================
+    private static final String PRODUCTION_ASG = 'production-asg-web'
+    private static final String PROD_ASG = 'prod-asg'
+
+    // ============================================================================
+    // Stage/Instance Constants
+    // ============================================================================
+    private static final String STAGING_01 = 'staging-01'
+    private static final String STAGING_02 = 'staging-02'
+    private static final String APP_SERVER_01 = 'app-server-01'
+    private static final String APP_SERVER_02 = 'app-server-02'
+    private static final String IP_ADDRESS = '192.168.1.100'
+    private static final String PRIVATE_IP = '10.0.1.50'
+    private static final String DNS_NAME = 'app.example.com'
+
+    // ============================================================================
+    // Ansible Constants
+    // ============================================================================
+    private static final String ANSIBLE_PATH = '/etc/ansible'
+    private static final String ANSIBLE_OPT_PATH = '/opt/ansible'
+    private static final String DEPLOY_PLAYBOOK = 'deploy.yml'
+    private static final String HEALTH_CHECK_PLAYBOOK = 'health-check.yml'
+    private static final String CONFIGURE_PLAYBOOK = 'configure.yml'
+    private static final String NON_EXISTENT_PLAYBOOK = 'non-existent.yml'
+
+    // ============================================================================
+    // Docker Image Constants
+    // ============================================================================
+    private static final String DOCKER_IMAGE = 'myrepo/myimage:1.0.0'
+    private static final String REGISTRY_IMAGE = 'registry/image:latest'
+    private static final String SHA256_IMAGE = 'myrepo/myimage@sha256:abc123def456'
+
+    // ============================================================================
+    // Environment Constants
+    // ============================================================================
+    private static final String DEVELOPMENT_ENV = 'development'
+    private static final String STAGING_ENV = 'staging'
+    private static final String PRODUCTION_ENV = 'production'
+    private static final String TEST_ENV = 'test'
+    private static final String INVALID_ENV = 'invalid-env'
+
     private DeploymentFunctions deploymentFunctions
 
     void setup() {
