@@ -208,3 +208,53 @@ void runAnsiblePlaybook(String ansibleRepoPath, String playbookName, Map paramet
         error "Failed to run Ansible playbook '${playbookName}': ${e.message}"
     }
 }
+
+/**
+ * Performs a health check on the application running in a specified instance.
+ * Tries multiple common health endpoints until one responds with HTTP 200.
+ *
+ * @param instanceAddress IP address or hostname of the instance to check (required)
+ * @param healthEndpoints List of endpoint paths to check (optional, defaults to ['/health', '/healthz', '/'])
+ * @param protocol Protocol to use for the health check (optional, defaults to 'http')
+ * @param connectTimeout Connection timeout in seconds (optional, defaults to 5)
+ * @param maxTimeout Maximum request timeout in seconds (optional, defaults to 10)
+ * @return true if health check passes, false otherwise
+ * @throws IllegalArgumentException if instanceAddress is null or empty
+ */
+boolean performHealthCheck(String instanceAddress,
+                          List<String> healthEndpoints = ['/health', '/healthz', '/'],
+                          String protocol = 'http',
+                          int connectTimeout = 5,
+                          int maxTimeout = 10) {
+    // Input validation
+    if (!instanceAddress?.trim()) {
+        throw new IllegalArgumentException('Instance address cannot be null or empty')
+    }
+
+    try {
+        echo "Performing health check on ${instanceAddress}"
+
+        // Try to reach the health endpoint
+
+        for (endpoint in healthEndpoints) {
+            String url = "${protocol}://${instanceAddress}${endpoint}"
+            String result = sh(
+                script: "curl -f -s -o /dev/null -w '%{http_code}' " +
+                        "--connect-timeout ${connectTimeout} " +
+                        "--max-time ${maxTimeout} ${url}",
+                returnStdout: true
+            ).trim()
+
+            if (result == '200') {
+                echo "Health check passed for ${instanceAddress}${endpoint} - HTTP ${result}"
+                return true
+            }
+        }
+
+        echo "Health check failed for ${instanceAddress} - no healthy endpoints found"
+        return false
+    } catch (IOException | InterruptedException e) {
+        echo "Error performing health check: ${e.message}"
+        return false
+    }
+}
