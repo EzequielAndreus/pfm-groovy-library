@@ -174,17 +174,16 @@ class DeploymentFunctionsUnitTests extends Specification {
         when: 'validating if stage is up'
         boolean result = deploymentFunctions.validateStageIsUp(stageName)
 
-        then: 'the result matches expectations or is a boolean type'
+        then: 'the result matches expectations when provided'
         if (expectedResult != null) {
             assert result == expectedResult
         }
-        assert result instanceof Boolean
 
         where:
         stageName   | expectedResult
         STAGING_01  | true
         STAGING_02  | false
-        IP_ADDRESS  | null  // Just check it returns Boolean
+        IP_ADDRESS  | null  // No specific expectation; result may be true or false
     }
 
     @Unroll
