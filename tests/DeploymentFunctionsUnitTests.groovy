@@ -93,45 +93,36 @@ class DeploymentFunctionsUnitTests extends Specification {
         deploymentFunctions = new DeploymentFunctions()
     }
 
+    // ============================================================================
+    // Tests for buildAndTagImage()
+    // ============================================================================
 
-        when:
+    @Unroll
+    void testBuildAndTagImageReturnsValidCommitHash(String repositoryUrl, String branch) {
+        expect: 'buildAndTagImage returns a valid SHA-1 commit hash'
         String result = deploymentFunctions.buildAndTagImage(repositoryUrl, branch)
+        assertValidCommitHash(result)
 
-        then:
-        assert result != null
-        assert result
+        where:
+        repositoryUrl   | branch
+        HTTPS_REPO_URL  | MAIN_BRANCH
+        SSH_REPO_URL    | DEVELOP_BRANCH
+        HTTPS_REPO_URL  | FEATURE_BRANCH
     }
 
-    void testBuildAndTagImageThrowsExceptionForEmptyRepositoryUrl() {
-        given:
-        String repositoryUrl = ''
-        String branch = 'main'
-
+    @Unroll
+    void testBuildAndTagImageThrowsExceptions(Closure action, Class<? extends Exception> expectedExceptionType) {
         when:
-        deploymentFunctions.buildAndTagImage(repositoryUrl, branch)
+        action.call()
 
         then:
-        assert thrown(IllegalArgumentException)
-    }
+        thrown(expectedExceptionType)
 
-    void testBuildAndTagImageThrowsExceptionForEmptyBranch() {
-        given:
-        String repositoryUrl = 'https://github.com/user/repo.git'
-        String branch = ''
-
-        when:
-        deploymentFunctions.buildAndTagImage(repositoryUrl, branch)
-
-        then:
-        assert thrown(IllegalArgumentException)
-    }
-
-    void testBuildAndTagImageThrowsExceptionForNullParameters() {
-        when:
-        deploymentFunctions.buildAndTagImage(null, null)
-
-        then:
-        assert thrown(NullPointerException)
+        where:
+        action                                                       | expectedExceptionType
+        { deploymentFunctions.buildAndTagImage('', MAIN_BRANCH) }    | IllegalArgumentException
+        { deploymentFunctions.buildAndTagImage(HTTPS_REPO_URL, '') } | IllegalArgumentException
+        { deploymentFunctions.buildAndTagImage(null, null) }         | NullPointerException
     }
 
     // ============================================================================
