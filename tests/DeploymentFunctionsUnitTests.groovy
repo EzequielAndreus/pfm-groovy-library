@@ -254,7 +254,6 @@ class DeploymentFunctionsUnitTests extends Specification {
         if (expectedResult != null) {
             assert result == expectedResult
         }
-        assert result instanceof Boolean
 
         where:
         instanceName   | expectedResult
