@@ -1,5 +1,6 @@
 import spock.lang.Specification
 import spock.lang.Unroll
+import helpers.AnsibleParametersBuilder
 
 /* groovylint-disable CompileStatic, MethodCount, JUnitPublicNonTestMethod */
 
@@ -75,44 +76,23 @@ class DeploymentFunctionsUnitTests extends Specification {
 
     private DeploymentFunctions deploymentFunctions
 
+    // ============================================================================
+    // Helper Methods
+    // ============================================================================
+
+    /**
+     * Validates that a string is a valid SHA-1 commit hash
+     */
+    private void assertValidCommitHash(String hash) {
+        assert hash != null
+        assert hash.matches(SHA1_REGEX)
+        assert hash.length() == COMMIT_HASH_LENGTH
+    }
+
     void setup() {
         deploymentFunctions = new DeploymentFunctions()
     }
 
-    // ============================================================================
-    // Tests for buildAndTagImage()
-    // ============================================================================
-
-    void testBuildAndTagImageReturnsValidCommitHash() {
-        given:
-        String repositoryUrl = 'https://github.com/user/repo.git'
-        String branch = 'main'
-
-        when:
-        String result = deploymentFunctions.buildAndTagImage(repositoryUrl, branch)
-
-        then:
-        assert result != null
-        assert result.matches('[a-f0-9]{40}') // Validate SHA-1 hash format
-    }
-
-    void testBuildAndTagImageHandlesRepositoryUrlWithSSHFormat() {
-        given:
-        String repositoryUrl = 'git@github.com:user/repo.git'
-        String branch = 'develop'
-
-        when:
-        String result = deploymentFunctions.buildAndTagImage(repositoryUrl, branch)
-
-        then:
-        assert result != null
-        assert result.length() == 40
-    }
-
-    void testBuildAndTagImageBuildsFromSpecifiedBranch() {
-        given:
-        String repositoryUrl = 'https://github.com/user/repo.git'
-        String branch = 'feature/new-feature'
 
         when:
         String result = deploymentFunctions.buildAndTagImage(repositoryUrl, branch)
