@@ -2,7 +2,7 @@ import spock.lang.Specification
 import spock.lang.Unroll
 import helpers.AnsibleParametersBuilder
 
-/* groovylint-disable CompileStatic, MethodCount, JUnitPublicNonTestMethod */
+/* groovylint-disable CompileStatic, JUnitPublicNonTestMethod */
 
 /**
  * Unit tests for DeploymentFunctions.
