@@ -151,3 +151,60 @@ boolean validateStageIsUp(String instanceAddress) {
         return false
     }
 }
+
+/**
+ * Executes an Ansible playbook with specified parameters.
+ *
+ * Note: Requires Ansible to be installed and properly configured on the executing system.
+ *
+ * @param ansibleRepoPath The path to the Ansible repository (required)
+ * @param playbookName The name of the playbook to run (required)
+ * @param parameters A map of parameters to pass to the playbook (required, can be empty)
+ * @throws IllegalArgumentException if parameters are invalid
+ * @throws FileNotFoundException if playbook file does not exist
+ */
+void runAnsiblePlaybook(String ansibleRepoPath, String playbookName, Map parameters) {
+    // Input validation
+    if (!ansibleRepoPath?.trim()) {
+        throw new IllegalArgumentException('Ansible repository path cannot be null or empty')
+    }
+    if (!playbookName?.trim()) {
+        throw new IllegalArgumentException('Playbook name cannot be null or empty')
+    }
+    if (parameters == null) {
+        throw new IllegalArgumentException('Parameters map cannot be null (use empty map instead)')
+    }
+
+    try {
+        echo "Running Ansible playbook: ${playbookName}"
+
+        // Check if playbook file exists
+        String playbookPath = "${ansibleRepoPath}/${playbookName}"
+        Integer fileCheckResult = sh(
+            script: "test -f ${playbookPath}",
+            returnStatus: true
+        )
+
+        if (fileCheckResult) {
+            throw new FileNotFoundException("Playbook file not found: ${playbookPath}")
+        }
+
+        // Build extra vars from parameters map using JSON format for better handling
+        String extraVars = ''
+        if (parameters) {
+            // Convert map to JSON string for safer passing
+            String jsonParams = groovy.json.JsonOutput.toJson(parameters)
+            extraVars = "--extra-vars '${jsonParams}'"
+        }
+
+        // Build and execute the ansible-playbook command
+        String command = "ansible-playbook ${playbookPath} ${extraVars}"
+
+        echo "Executing: ${command}"
+        sh command
+
+        echo "Successfully executed playbook ${playbookName}"
+    } catch (IOException | InterruptedException e) {
+        error "Failed to run Ansible playbook '${playbookName}': ${e.message}"
+    }
+}
