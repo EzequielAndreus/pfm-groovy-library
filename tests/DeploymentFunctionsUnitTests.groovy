@@ -99,4 +99,79 @@ class DeploymentFunctionsUnitTests extends Specification {
         then:
         assert thrown(NullPointerException)
     }
+
+    // ============================================================================
+    // Tests for updateAwsAsg()
+    // ============================================================================
+
+    void testUpdateAwsAsgSuccessfully() {
+        given:
+        String asgName = 'production-asg-web'
+        Integer instanceCount = 3
+
+        when:
+        deploymentFunctions.updateAwsAsg(asgName, instanceCount)
+
+        then:
+        assert noExceptionThrown() != null
+    }
+
+    @Unroll
+    void testUpdateAwsAsgHandlesDifferentInstanceCounts(Integer instanceCount) {
+        given:
+        String asgName = 'prod-asg'
+
+        when:
+        deploymentFunctions.updateAwsAsg(asgName, instanceCount)
+
+        then:
+        noExceptionThrown()
+
+        where:
+        instanceCount << [1, 5, 10, 25]
+    }
+
+    void testUpdateAwsAsgThrowsExceptionForNegativeInstanceCount() {
+        given:
+        String asgName = 'prod-asg'
+        Integer instanceCount = -1
+
+        when:
+        deploymentFunctions.updateAwsAsg(asgName, instanceCount)
+
+        then:
+        assert thrown(IllegalArgumentException)
+    }
+
+    void testUpdateAwsAsgThrowsExceptionForZeroInstanceCount() {
+        given:
+        String asgName = 'prod-asg'
+        Integer instanceCount = 0
+
+        when:
+        deploymentFunctions.updateAwsAsg(asgName, instanceCount)
+
+        then:
+        assert thrown(IllegalArgumentException)
+    }
+
+    void testUpdateAwsAsgThrowsExceptionForEmptyAsgName() {
+        given:
+        String asgName = ''
+        Integer instanceCount = 2
+
+        when:
+        deploymentFunctions.updateAwsAsg(asgName, instanceCount)
+
+        then:
+        assert thrown(IllegalArgumentException)
+    }
+
+    void testUpdateAwsAsgThrowsExceptionForNullAsgName() {
+        when:
+        deploymentFunctions.updateAwsAsg(null, 2)
+
+        then:
+        assert thrown(NullPointerException)
+    }
 }
