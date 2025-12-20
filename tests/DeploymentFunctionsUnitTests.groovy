@@ -174,4 +174,60 @@ class DeploymentFunctionsUnitTests extends Specification {
         then:
         assert thrown(NullPointerException)
     }
+
+    // ============================================================================
+    // Tests for validateStageIsUp()
+    // ============================================================================
+
+    void testValidateStageIsUpReturnsTrue() {
+        given:
+        String stageName = 'staging-01'
+
+        when:
+        boolean result = deploymentFunctions.validateStageIsUp(stageName)
+
+        then:
+        assert result == true
+    }
+
+    void testValidateStageIsUpReturnsFalse() {
+        given:
+        String stageName = 'staging-02'
+
+        when:
+        boolean result = deploymentFunctions.validateStageIsUp(stageName)
+
+        then:
+        assert result == false
+    }
+
+    void testValidateStageIsUpHandlesIpAddresses() {
+        given:
+        String stageName = '192.168.1.100'
+
+        when:
+        boolean result = deploymentFunctions.validateStageIsUp(stageName)
+
+        then:
+        assert result instanceof Boolean
+    }
+
+    void testValidateStageIsUpThrowsExceptionForEmptyStageName() {
+        given:
+        String stageName = ''
+
+        when:
+        deploymentFunctions.validateStageIsUp(stageName)
+
+        then:
+        assert thrown(IllegalArgumentException)
+    }
+
+    void testValidateStageIsUpThrowsExceptionForNullStageName() {
+        when:
+        deploymentFunctions.validateStageIsUp(null)
+
+        then:
+        assert thrown(NullPointerException)
+    }
 }
