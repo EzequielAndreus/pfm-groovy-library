@@ -258,3 +258,46 @@ boolean performHealthCheck(String instanceAddress,
         return false
     }
 }
+
+/**
+ * Tags a Docker image for a specific environment.
+ *
+ * Note: Requires Docker to be installed and running on the executing system.
+ *
+ * @param imageId The ID or name of the image to tag (required)
+ * @param environment The target environment: 'development', 'staging', 'production', or 'test' (required)
+ * @param imageName The base image name for tagging (required)
+ * @return true if tagging is successful, false otherwise
+ * @throws IllegalArgumentException if parameters are invalid
+ */
+boolean tagImageForEnvironment(String imageId, String environment, String imageName) {
+    // Input validation
+    if (!imageId?.trim()) {
+        throw new IllegalArgumentException('Image ID cannot be null or empty')
+    }
+    if (!environment?.trim()) {
+        throw new IllegalArgumentException('Environment cannot be null or empty')
+    }
+
+    // Validate environment parameter
+    List<String> validEnvironments = ['development', 'staging', 'production', 'test']
+    if (!validEnvironments.contains(environment)) {
+        String validEnvList = validEnvironments.join(', ')
+        throw new IllegalArgumentException("Invalid environment: ${environment}. Must be one of: ${validEnvList}")
+    }
+
+    try {
+        echo "Tagging image ${imageId} for ${environment} environment"
+
+        // Tag the image for the specified environment
+        sh "docker tag ${imageId} ${imageName}:${environment}"
+        sh "docker tag ${imageId} ${imageName}:${environment}-latest"
+
+        echo "Successfully tagged image ${imageId} as ${imageName}:${environment} " +
+             "and ${imageName}:${environment}-latest"
+        return true
+    } catch (IOException | InterruptedException e) {
+        echo "Failed to tag image: ${e.message}"
+        return false
+    }
+}
