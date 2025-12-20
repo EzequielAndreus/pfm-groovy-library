@@ -95,7 +95,7 @@ class AnsibleParametersBuilder {
      * @return the constructed parameter map
      */
     Map build() {
-        return parameters
+        return parameters.clone()
     }
 
 }
