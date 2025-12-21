@@ -1,10 +1,22 @@
+package com.pfm
+
+import groovy.json.JsonOutput
+import java.text.SimpleDateFormat
+
 /* groovylint-disable CompileStatic */
+
 /**
  * Provides deployment-related utility functions for CI/CD pipelines.
  * Includes operations for Docker image management, AWS Auto Scaling Group updates,
  * instance validation, Ansible playbook execution, and health checks.
  */
 class DeploymentFunctions {
+
+    def script
+
+    DeploymentFunctions(script = null) {
+        this.script = script
+    }
 
     /**
     * Builds and tags a new Docker image from a specific branch.
@@ -23,34 +35,47 @@ class DeploymentFunctions {
         if (!branch?.trim()) {
             throw new IllegalArgumentException('Branch cannot be null or empty')
         }
+        if (!imageName?.trim()) {
+            throw new IllegalArgumentException('Image name cannot be null or empty')
+        }
 
         String workDir = "/tmp/build-${System.currentTimeMillis()}"
 
         try {
             // Clone the repository
-            sh "git clone ${repositoryUrl} ${workDir}"
+            script.sh "git clone ${repositoryUrl} ${workDir}"
 
             // Checkout the specified branch
-            sh "cd ${workDir} && git checkout ${branch}"
+            script.sh "cd ${workDir} && git checkout ${branch}"
 
             // Get the short commit hash
-            String commitHash = sh(
-                script: "cd ${workDir} && git rev-parse --short HEAD",
-                returnStdout: true
-            ).trim()
+            script.sh "cd ${workDir} && git rev-parse --short HEAD > /tmp/commit-hash.txt"
+
+            // Read the commit hash from file
+            String commitHash = script.readFile('/tmp/commit-hash.txt').trim()
 
             // Build the Docker image
-            String dateTag = new Date().format('yyyyMMdd')
-            sh "cd ${workDir} && docker build -t ${imageName}:${commitHash} -t ${imageName}:${dateTag} ."
+            String dateTag = new SimpleDateFormat('yyyyMMdd', Locale.US).format(new Date())
+            script.sh "cd ${workDir} && docker build -t ${imageName}:${commitHash} -t ${imageName}:${dateTag} ."
 
             // publish image in Docker Hub
-            sh "docker push ${imageName}:${commitHash}"
+            script.sh "docker push ${imageName}:${commitHash}"
 
-            echo "Successfully built, tagged, and published image as ${imageName}:${commitHash}"
+            script.echo "Successfully built, tagged, and published image as ${imageName}:${commitHash}"
             return commitHash
-        } finally {
-            // Clean up the working directory
-            sh "rm -rf ${workDir}"
+        } catch (Exception e) {
+            // Shell command failures (git, docker commands with non-zero exit codes)
+            script.echo "Build failed: ${e.message}"
+            throw e
+        } catch (IOException e) {
+            // File I/O operations (readFile failures, file system issues)
+            script.echo "I/O error during build: ${e.message}"
+            throw e
+        }
+        finally {
+            // Clean up the working directory and temp file
+            script.sh "rm -rf ${workDir}"
+            script.sh 'rm -f /tmp/commit-hash.txt'
         }
     }
 
@@ -77,7 +102,7 @@ class DeploymentFunctions {
 
         try {
             // Get current desired capacity
-            Integer currentCapacity = sh(
+            Integer currentCapacity = script.sh(
                 script: 'aws autoscaling describe-auto-scaling-groups ' +
                         "--auto-scaling-group-names ${asgName} " +
                         "--query 'AutoScalingGroups[0].DesiredCapacity' " +
@@ -89,7 +114,7 @@ class DeploymentFunctions {
             Integer newCapacity = currentCapacity + instanceCount
 
             // Get the maximum capacity of the ASG
-            Integer maxCapacity = sh(
+            Integer maxCapacity = script.sh(
                 script: "aws autoscaling describe-auto-scaling-groups --auto-scaling-group-names ${asgName} " +
                         "--query 'AutoScalingGroups[0].MaxSize' --output text",
                 returnStdout: true
@@ -99,14 +124,14 @@ class DeploymentFunctions {
                 throw new IllegalArgumentException("New capacity ${newCapacity} exceeds maximum ${maxCapacity}")
             }
 
-            echo "Updating ASG '${asgName}' from ${currentCapacity} to ${newCapacity} instances"
+            script.echo "Updating ASG '${asgName}' from ${currentCapacity} to ${newCapacity} instances"
 
             // Update the Auto Scaling Group
-            sh "aws autoscaling set-desired-capacity " +
+            script.sh "aws autoscaling set-desired-capacity " +
                 "--auto-scaling-group-name ${asgName} " +
                 "--desired-capacity ${newCapacity}"
 
-            echo "Successfully updated ASG '${asgName}' desired capacity to ${newCapacity}"
+            script.echo "Successfully updated ASG '${asgName}' desired capacity to ${newCapacity}"
             return true
         } catch (IOException | InterruptedException e) {
             error "Failed to update ASG '${asgName}': ${e.message}"
@@ -128,37 +153,37 @@ class DeploymentFunctions {
         }
 
         try {
-            echo "Validating stage at ${instanceAddress}"
+            script.echo "Validating stage at ${instanceAddress}"
 
             // Perform ping check (send 3 pings)
-            Integer pingResult = sh(
+            Integer pingResult = script.sh(
                 script: "ping -c 3 ${instanceAddress}",
                 returnStatus: true
             )
 
             if (pingResult) {
-                echo "Ping check failed for ${instanceAddress}"
+                script.echo "Ping check failed for ${instanceAddress}"
                 return false
             }
 
-            echo "Ping check passed for ${instanceAddress}"
+            script.echo "Ping check passed for ${instanceAddress}"
 
             // Check SSH port (22) accessibility
-            Integer sshResult = sh(
+            Integer sshResult = script.sh(
                 script: "nc -zv -w 5 ${instanceAddress} 22",
                 returnStatus: true
             )
 
             if (sshResult) {
-                echo "SSH port check failed for ${instanceAddress}"
+                script.echo "SSH port check failed for ${instanceAddress}"
                 return false
             }
 
-            echo "SSH port check passed for ${instanceAddress}"
-            echo "Stage ${instanceAddress} is up and accessible"
+            script.echo "SSH port check passed for ${instanceAddress}"
+            script.echo "Stage ${instanceAddress} is up and accessible"
             return true
         } catch (IOException | InterruptedException e) {
-            echo "Error validating stage: ${e.message}"
+            script.echo "Error validating stage: ${e.message}"
             return false
         }
     }
@@ -187,11 +212,11 @@ class DeploymentFunctions {
         }
 
         try {
-            echo "Running Ansible playbook: ${playbookName}"
+            script.echo "Running Ansible playbook: ${playbookName}"
 
             // Check if playbook file exists
             String playbookPath = "${ansibleRepoPath}/${playbookName}"
-            Integer fileCheckResult = sh(
+            Integer fileCheckResult = script.sh(
                 script: "test -f ${playbookPath}",
                 returnStatus: true
             )
@@ -204,17 +229,17 @@ class DeploymentFunctions {
             String extraVars = ''
             if (parameters) {
                 // Convert map to JSON string for safer passing
-                String jsonParams = groovy.json.JsonOutput.toJson(parameters)
+                String jsonParams = JsonOutput.toJson(parameters)
                 extraVars = "--extra-vars '${jsonParams}'"
             }
 
             // Build and execute the ansible-playbook command
             String command = "ansible-playbook ${playbookPath} ${extraVars}"
 
-            echo "Executing: ${command}"
-            sh command
+            script.echo "Executing: ${command}"
+            script.sh command
 
-            echo "Successfully executed playbook ${playbookName}"
+            script.echo "Successfully executed playbook ${playbookName}"
         } catch (IOException | InterruptedException e) {
             error "Failed to run Ansible playbook '${playbookName}': ${e.message}"
         }
@@ -243,13 +268,13 @@ class DeploymentFunctions {
         }
 
         try {
-            echo "Performing health check on ${instanceAddress}"
+            script.echo "Performing health check on ${instanceAddress}"
 
             // Try to reach the health endpoint
 
             for (endpoint in healthEndpoints) {
                 String url = "${protocol}://${instanceAddress}${endpoint}"
-                String result = sh(
+                String result = script.sh(
                     script: "curl -f -s -o /dev/null -w '%{http_code}' " +
                             "--connect-timeout ${connectTimeout} " +
                             "--max-time ${maxTimeout} ${url}",
@@ -257,15 +282,15 @@ class DeploymentFunctions {
                 ).trim()
 
                 if (result == '200') {
-                    echo "Health check passed for ${instanceAddress}${endpoint} - HTTP ${result}"
+                    script.echo "Health check passed for ${instanceAddress}${endpoint} - HTTP ${result}"
                     return true
                 }
             }
 
-            echo "Health check failed for ${instanceAddress} - no healthy endpoints found"
+            script.echo "Health check failed for ${instanceAddress} - no healthy endpoints found"
             return false
         } catch (IOException | InterruptedException e) {
-            echo "Error performing health check: ${e.message}"
+            script.echo "Error performing health check: ${e.message}"
             return false
         }
     }
@@ -277,11 +302,10 @@ class DeploymentFunctions {
     *
     * @param imageId The ID or name of the image to tag (required)
     * @param environment The target environment: 'development', 'staging', 'production', or 'test' (required)
-    * @param imageName The base image name for tagging (required)
     * @return true if tagging is successful, false otherwise
     * @throws IllegalArgumentException if parameters are invalid
     */
-    boolean tagImageForEnvironment(String imageId, String environment, String imageName) {
+    boolean tagImageForEnvironment(String imageId, String environment) {
         // Input validation
         if (!imageId?.trim()) {
             throw new IllegalArgumentException('Image ID cannot be null or empty')
@@ -297,18 +321,22 @@ class DeploymentFunctions {
             throw new IllegalArgumentException("Invalid environment: ${environment}. Must be one of: ${validEnvList}")
         }
 
+        // Extract base image name from imageId
+        String imageName = imageId.contains(':') ? imageId.split(':')[0] : imageId
+        imageName = imageName.contains('@') ? imageName.split('@')[0] : imageName
+
         try {
-            echo "Tagging image ${imageId} for ${environment} environment"
+            script.echo "Tagging image ${imageId} for ${environment} environment"
 
             // Tag the image for the specified environment
-            sh "docker tag ${imageId} ${imageName}:${environment}"
-            sh "docker tag ${imageId} ${imageName}:${environment}-latest"
+            script.sh "docker tag ${imageId} ${imageName}:${environment}"
+            script.sh "docker tag ${imageId} ${imageName}:${environment}-latest"
 
-            echo "Successfully tagged image ${imageId} as ${imageName}:${environment} " +
+            script.echo "Successfully tagged image ${imageId} as ${imageName}:${environment} " +
                 "and ${imageName}:${environment}-latest"
             return true
         } catch (IOException | InterruptedException e) {
-            echo "Failed to tag image: ${e.message}"
+            script.echo "Failed to tag image: ${e.message}"
             return false
         }
     }
