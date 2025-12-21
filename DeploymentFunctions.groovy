@@ -32,7 +32,8 @@ String prepareDockerImage(String repositoryUrl, String branch, String imageName)
         ).trim()
 
         // Build the Docker image
-        sh "cd ${workDir} && docker build -t ${imageName}:${commitHash} ."
+        String dateTag = new Date().format('yyyyMMdd')
+        sh "cd ${workDir} && docker build -t ${imageName}:${commitHash} -t ${imageName}:${dateTag} ."
 
         // publish image in Docker Hub
         sh "docker push ${imageName}:${commitHash}"
