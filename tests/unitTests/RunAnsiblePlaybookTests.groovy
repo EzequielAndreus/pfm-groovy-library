@@ -1,3 +1,4 @@
+/* groovylint-disable CompileStatic, JUnitPublicNonTestMethod */
 package com.pfm.tests
 
 import spock.lang.Specification
@@ -5,21 +6,19 @@ import com.pfm.DeploymentFunctions
 import spock.lang.Unroll
 
 /**
- * Tests error handling and cleanup behavior when Docker build operations fail.
- * 
- * <p>This test verifies that when a Docker build fails during the image preparation process,
- * the method properly handles the exception and ensures that cleanup operations are still
- * executed to remove temporary files and directories.</p>
- * 
- * <p>The test simulates successful Git operations followed by a Docker build failure,
- * and verifies that:</p>
- * <ul>
- *   <li>The original exception is propagated</li>
- *   <li>Temporary build directories are cleaned up</li>
- *   <li>Commit hash files are cleaned up</li>
- * </ul>
- * 
- * @throws Exception when Docker build operations fail
+ * Unit tests for the {@link DeploymentFunctions#runAnsiblePlaybook(String, String, Map)} method.
+ *
+ * <p>This test class validates the Ansible playbook execution functionality which includes
+ * running playbooks with various configurations, parameter passing, and proper command
+ * construction. The tests cover scenarios including successful playbook execution,
+ * parameter validation, and different Ansible installation paths.</p>
+ *
+ * <p>The tests use Spock framework with mocked Jenkins script context to simulate
+ * Ansible command execution and verify correct command construction and parameter handling.</p>
+ *
+ * @author PFM Team
+ * @since 1.0
+ * @see DeploymentFunctions
  */
 class RunAnsiblePlaybookTests extends Specification {
 
@@ -34,12 +33,12 @@ class RunAnsiblePlaybookTests extends Specification {
 
     // Instance Fields
     private DeploymentFunctions deploymentFunctions
-    /* groovylint-disable-next-line FieldTypeRequired */
-    private def scriptMock
+    /* groovylint-disable-next-line FieldTypeRequired, NoDef */
+    private scriptMock
 
     /**
      * Sets up test fixtures before each test method execution.
-     * 
+     *
      * <p>Initializes the mock Jenkins script object and creates a new
      * {@link DeploymentFunctions} instance with the mocked script context.</p>
      */
@@ -51,7 +50,7 @@ class RunAnsiblePlaybookTests extends Specification {
     /**
      * Tests the {@link DeploymentFunctions#runAnsiblePlaybook(String, String, Map)} method
      * with various Ansible paths, playbooks, and parameter configurations.
-     * 
+     *
      * <p>This parameterized test verifies that the Ansible playbook execution method correctly:</p>
      * <ul>
      *   <li>Constructs the ansible-playbook command with the specified playbook</li>
@@ -59,11 +58,11 @@ class RunAnsiblePlaybookTests extends Specification {
      *   <li>Passes extra variables when parameters are provided</li>
      *   <li>Handles empty parameter maps correctly</li>
      * </ul>
-     * 
+     *
      * <p>The test mocks the Jenkins script's {@code sh} method to simulate successful
      * command execution and verifies that the correct ansible-playbook command is constructed
      * with appropriate parameters and extra variables.</p>
-     * 
+     *
      * @param ansiblePath the file system path where Ansible is installed
      * @param playbook the name of the Ansible playbook file to execute
      * @param parameters a map of parameters to pass as extra variables to the playbook
@@ -71,7 +70,7 @@ class RunAnsiblePlaybookTests extends Specification {
     @Unroll('runAnsiblePlaybook executes ansible-playbook with correct parameters')
     void testRunAnsiblePlaybook(String ansiblePath, String playbook, Map parameters) {
         given: 'Ansible command will succeed'
-        def capturedCommands = []
+        List<String> capturedCommands = []
         scriptMock.sh(_) >> { args ->
             String command = (args instanceof Map) ? args.script : args[0]
             capturedCommands << command
@@ -83,9 +82,11 @@ class RunAnsiblePlaybookTests extends Specification {
         deploymentFunctions.runAnsiblePlaybook(ansiblePath, playbook, parameters)
 
         then:
-        capturedCommands.any { it.contains("ansible-playbook") && it.contains(playbook) }
+        capturedCommands.any { command -> command.contains('ansible-playbook') && command.contains(playbook) }
         if (parameters.environment) {
-            capturedCommands.any { it.contains("--extra-vars") && it.contains("environment=${parameters.environment}") }
+            capturedCommands.any {
+                command -> command.contains('--extra-vars') && command.contains("environment=${parameters.environment}")
+            }
         }
 
         where:
@@ -96,14 +97,14 @@ class RunAnsiblePlaybookTests extends Specification {
 
     /**
      * Tests input validation for the {@link DeploymentFunctions#runAnsiblePlaybook(String, String, Map)} method.
-     * 
+     *
      * <p>This parameterized test ensures that the Ansible playbook execution method properly validates
      * input parameters and throws {@link IllegalArgumentException} for invalid inputs such as null
      * or empty values for Ansible path, playbook name, or null parameters map.</p>
-     * 
+     *
      * <p>The validation covers all required parameters to ensure the method fails fast
      * with appropriate error messages when called with invalid arguments.</p>
-     * 
+     *
      * @param ansiblePath the Ansible installation path to validate (may be invalid)
      * @param playbook the playbook name to validate (may be invalid)
      * @param parameters the parameters map to validate (may be invalid)
@@ -126,4 +127,5 @@ class RunAnsiblePlaybookTests extends Specification {
         ANSIBLE_PATH | ''              | [:]        | 'playbook is empty'
         ANSIBLE_PATH | DEPLOY_PLAYBOOK | null       | 'parameters is null'
     }
+
 }
