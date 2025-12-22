@@ -1,0 +1,141 @@
+plugins {
+    id 'groovy'
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    // Groovy core - using 4.0.x for Spock compatibility
+    implementation 'org.apache.groovy:groovy:4.0.23'
+    implementation 'org.apache.groovy:groovy-json:4.0.23'
+
+    // Spock Framework for testing - use stable version
+    testImplementation platform('org.spockframework:spock-bom:2.3-groovy-4.0')
+    testImplementation 'org.spockframework:spock-core'
+    
+    // JUnit 5 (Jupiter) for running Spock tests
+    testImplementation platform('org.junit:junit-bom:5.10.1')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+
+    // Byte-buddy for mocking (required by Spock)
+    testImplementation 'net.bytebuddy:byte-buddy:1.14.10'
+    
+    // Objenesis for instantiation (required by Spock)
+    testImplementation 'org.objenesis:objenesis:3.3'
+}
+
+// Configure source sets
+sourceSets {
+    main {
+        groovy {
+            srcDirs = ['src', 'vars']
+        }
+    }
+    test {
+        groovy {
+            srcDirs = ['tests/unitTests']
+        }
+    }
+}
+
+// Configure Java compatibility
+java {
+    sourceCompatibility = JavaVersion.VERSION_11
+    targetCompatibility = JavaVersion.VERSION_11
+}
+
+// Configure Groovy compiler
+tasks.withType(GroovyCompile) {
+    options.fork = true
+    options.forkOptions.jvmArgs = ['-Xmx1g']
+}
+
+// Configure test task
+test {
+    useJUnitPlatform()
+
+    testLogging {
+        events "passed", "skipped", "failed"
+        exceptionFormat = 'full'
+        showStandardStreams = false
+        showCauses = true
+        showStackTraces = true
+    }
+
+    // Set maximum parallel forks
+    maxParallelForks = Runtime.runtime.availableProcessors().intdiv(2) ?: 1
+
+    // Report configuration
+    reports {
+        html.required = true
+        junitXml.required = true
+    }
+
+    // Fail fast on first test failure (optional, can be removed if you prefer to run all tests)
+    failFast = false
+}
+
+// Create a task to display test results
+tasks.register('testReport') {
+    description = 'Generates a test report after running tests'
+    group = 'verification'
+
+    // Use the new layout API instead of buildDir
+    def buildDirectory = layout.buildDirectory
+
+    doLast {
+        def testResultsDir = buildDirectory.dir('test-results/test').get().asFile
+        def reportsDir = buildDirectory.dir('reports/tests/test').get().asFile
+        
+        println "=".repeat(60)
+        println "TEST REPORT SUMMARY"
+        println "=".repeat(60)
+        
+        if (testResultsDir.exists()) {
+            println "Test results location: ${testResultsDir.absolutePath}"
+        }
+        
+        if (reportsDir.exists()) {
+            println "HTML test report: ${reportsDir.absolutePath}/index.html"
+            
+            // Try to read test summary if available
+            def indexFile = new File(reportsDir, 'index.html')
+            if (indexFile.exists()) {
+                println "Open the HTML report in your browser to view detailed results."
+            }
+        } else {
+            println "No test reports found. Tests may not have run."
+        }
+        
+        println "=".repeat(60)
+    }
+}
+
+// Make test report run after tests
+test.finalizedBy testReport
+
+// Task for continuous testing
+tasks.register('testWatch') {
+    description = 'Runs tests continuously on file changes'
+    group = 'verification'
+
+    doLast {
+        println 'Watching for changes... (Press Ctrl+C to stop)'
+    }
+}
+
+// Clean task configuration
+clean {
+    delete 'build'
+    delete '.gradle'
+}
+
+// Wrapper task configuration
+wrapper {
+    gradleVersion = '8.5'
+    distributionType = Wrapper.DistributionType.BIN
+}
+
