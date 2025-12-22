@@ -468,41 +468,51 @@ class DeploymentFunctionsUnitTests extends Specification {
     // Tests for performHealthCheck()
     // ============================================================================
 
-    @Unroll('Performing health check on instance #instanceName should return #expectedResult')
-    void testPerformHealthCheck(String instanceName, Boolean expectedResult) {
-        given: 'mocked method returns expected result'
-        deploymentFunctions.performHealthCheck(instanceName) >> expectedResult
+    @Unroll('performHealthCheck returns #expectedResult when health endpoint returns #httpStatus')
+    void testPerformHealthCheck(String instanceName, Integer httpStatus, Boolean expectedResult) {
+        given: 'health check endpoint returns specific status'
+        def capturedCommands = []
+        scriptMock.sh(_) >> { args ->
+            def actualArgs = (args instanceof List && args.size() == 1) ? args[0] : args
+            String command = (actualArgs instanceof Map) ? actualArgs.script : actualArgs.toString()
+            capturedCommands << command
+            
+            // Always return HTTP status as string since performHealthCheck uses returnStdout: true
+            if (command.contains('curl')) {
+                return httpStatus.toString()  // curl returns HTTP status code
+            }
+            return '0'  // Default string return
+        }
+        scriptMock.echo(_) >> null
 
-        when: 'performing health check on instance'
+        when:
         boolean result = deploymentFunctions.performHealthCheck(instanceName)
 
-        then: 'returns expected result'
+        then:
         result == expectedResult
+        capturedCommands.any { it.contains("curl") && it.contains(instanceName) && it.contains("/health") }
 
         where:
-        instanceName   | expectedResult
-        APP_SERVER_01  | true
-        APP_SERVER_02  | false
-        PRIVATE_IP     | false
-        DNS_NAME       | false
+        instanceName   | httpStatus | expectedResult
+        APP_SERVER_01  | 200        | true
+        APP_SERVER_02  | 503        | false
+        PRIVATE_IP     | 200        | true
+        DNS_NAME       | 500        | false
     }
 
-    @Unroll('performHealthCheck throws exception when #scenario')
-    void testPerformHealthCheckValidation(String instanceName,
-                                         Class<? extends Throwable> expectedException, String scenario) {
-        given:
-        deploymentFunctions.performHealthCheck(instanceName) >> { throw expectedException.newInstance() }
-
+    @Unroll('performHealthCheck validates input when #scenario')
+    void testPerformHealthCheckValidation(String instanceName, String scenario) {
         when:
         deploymentFunctions.performHealthCheck(instanceName)
 
         then:
-        thrown(expectedException)
+        thrown(IllegalArgumentException)
 
         where:
-        instanceName        | expectedException           | scenario
-        ''                  | IllegalArgumentException    | 'instance name is empty'
-        null.toString()     | NullPointerException        | 'instance name is null'
+        instanceName | scenario
+        null         | 'instance name is null'
+        ''           | 'instance name is empty'
+        '   '        | 'instance name is whitespace'
     }
 
     // ============================================================================
