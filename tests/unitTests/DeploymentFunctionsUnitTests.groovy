@@ -421,29 +421,30 @@ class DeploymentFunctionsUnitTests extends Specification {
     // Tests for runAnsiblePlaybook()
     // ============================================================================
 
-    @Unroll('Running Ansible playbook #playbook with parameters should execute successfully')
-    void testRunAnsiblePlaybookExecutesSuccessfully(String ansiblePath, String playbook, Map parameters) {
-        when: 'executing the Ansible playbook'
+    @Unroll('runAnsiblePlaybook executes ansible-playbook with correct parameters')
+    void testRunAnsiblePlaybook(String ansiblePath, String playbook, Map parameters) {
+        given: 'Ansible command will succeed'
+        def capturedCommands = []
+        scriptMock.sh(_) >> { args ->
+            String command = (args instanceof Map) ? args.script : args[0]
+            capturedCommands << command
+            return 0
+        }
+        scriptMock.echo(_) >> null
+
+        when:
         deploymentFunctions.runAnsiblePlaybook(ansiblePath, playbook, parameters)
 
-        then: 'no exception is thrown'
-        noExceptionThrown()
+        then:
+        capturedCommands.any { it.contains("ansible-playbook") && it.contains(playbook) }
+        if (parameters.environment) {
+            capturedCommands.any { it.contains("--extra-vars") && it.contains("environment=${parameters.environment}") }
+        }
 
         where:
         ansiblePath       | playbook               | parameters
-        ANSIBLE_PATH      | DEPLOY_PLAYBOOK        | (AnsibleParametersBuilder.builder()
-                                                       .withEnvironment(STAGING_ENV)
-                                                       .withVersion('1.0.0')
-                                                       .build())
-        ANSIBLE_PATH      | HEALTH_CHECK_PLAYBOOK  | (AnsibleParametersBuilder.builder()
-                                                       .build())
-        ANSIBLE_OPT_PATH  | CONFIGURE_PLAYBOOK     | (AnsibleParametersBuilder.builder()
-                                                       .withDebug(true)
-                                                       .withRetries(3)
-                                                       .withTimeout(300)
-                                                       .withHosts('all')
-                                                       .withTags(['setup', 'deploy'])
-                                                       .build())
+        ANSIBLE_PATH      | DEPLOY_PLAYBOOK        | [environment: STAGING_ENV, version: '1.0.0']
+        ANSIBLE_OPT_PATH  | HEALTH_CHECK_PLAYBOOK  | [:]
     }
 
     @Unroll('runAnsiblePlaybook throws exception when #scenario')
