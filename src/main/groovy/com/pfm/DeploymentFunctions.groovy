@@ -1,3 +1,4 @@
+/* groovylint-disable CatchException */
 package com.pfm
 
 import groovy.json.JsonOutput
@@ -12,8 +13,10 @@ import java.text.SimpleDateFormat
  */
 class DeploymentFunctions {
 
+    /* groovylint-disable-next-line FieldTypeRequired, NoDef */
     def script
 
+    /* groovylint-disable-next-line , MethodParameterTypeRequired, NoDef */
     DeploymentFunctions(script = null) {
         this.script = script
     }
