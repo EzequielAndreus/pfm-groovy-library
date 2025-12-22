@@ -372,22 +372,49 @@ class DeploymentFunctionsUnitTests extends Specification {
         DNS_NAME    | 'accessible'   | true
     }
 
-    @Unroll('validateStageIsUp throws exception when #scenario')
-    void testValidateStageIsUpValidation(String stageName,
-                                        Class<? extends Throwable> expectedException, String scenario) {
-        given:
-        deploymentFunctions.validateStageIsUp(stageName) >> { throw expectedException.newInstance() }
+    void 'validateStageIsUp returns false when ping succeeds but SSH port is closed'() {
+        given: 'ping succeeds but SSH port check fails'
+        def capturedCommands = []
+        scriptMock.sh(_) >> { args ->
+            String command = (args instanceof Map) ? args.script : args[0]
+            capturedCommands << command
+            
+            if (command.contains('ping')) {
+                return 0  // Ping success
+            }
+            if (command.contains('nc') && command.contains('22')) {
+                return 1  // SSH port closed
+            }
+            return 0
+        }
+        scriptMock.echo(_) >> null
 
         when:
-        deploymentFunctions.validateStageIsUp(stageName)
+        boolean result = deploymentFunctions.validateStageIsUp(STAGING_01)
 
         then:
-        thrown(expectedException)
+        result == false
+        capturedCommands.any { it.contains("ping") }
+        capturedCommands.any { it.contains("nc") }
+    }
 
-        where:
-        stageName           | expectedException           | scenario
-        ''                  | IllegalArgumentException    | 'stage name is empty'
-        null.toString()     | NullPointerException        | 'stage name is null'
+    void 'validateStageIsUp returns false when ping fails'() {
+        given: 'ping fails immediately'
+        scriptMock.sh(_) >> { args ->
+            String command = (args instanceof Map) ? args.script : args[0]
+            
+            if (command.contains('ping')) {
+                return 1  // Ping failure
+            }
+            return 0
+        }
+        scriptMock.echo(_) >> null
+
+        when:
+        boolean result = deploymentFunctions.validateStageIsUp(STAGING_01)
+
+        then:
+        result == false
     }
 
     // ============================================================================
