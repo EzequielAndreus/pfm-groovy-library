@@ -98,7 +98,7 @@ All changes must pass automated unit tests before merging. Tests run automatical
 
 ## Project Structure
 
-```
+```text
 pfm-groovy-library/
 ├── src/                     # Main source code
 │   └── com/pfm/            # Function implementations
