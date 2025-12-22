@@ -29,7 +29,14 @@ pipeline {
             steps {
                 script {
                     def commitHash = prepareDockerImage('https://github.com/user/repo.git', 'main', 'myapp')
-                    tagImageForEnvironment("myapp:${commitHash}", 'staging')
+                }
+            }
+        }
+        stage('Modify Infrastructure') {
+            steps {
+                script {
+                    updateAwsAsg('staging-asg', 2)
+                    validateStageIsUp('staging-server')
                 }
             }
         }
@@ -37,15 +44,14 @@ pipeline {
             steps {
                 script {
                     runAnsiblePlaybook('/opt/ansible', 'deploy.yml', [environment: 'staging'])
-                    updateAwsAsg('staging-asg', 2)
+                    performHealthCheck('staging-server')
                 }
             }
         }
-        stage('Verify') {
+        stage('Update Tag'){
             steps {
                 script {
-                    validateStageIsUp('staging-server')
-                    performHealthCheck('staging-server')
+                    tagImageForEnvironment("myapp:${commitHash}", 'staging')
                 }
             }
         }
