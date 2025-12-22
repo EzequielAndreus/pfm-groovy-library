@@ -1,4 +1,4 @@
-/* groovylint-disable JUnitTestMethodWithoutAssert */
+/* groovylint-disable JUnitTestMethodWithoutAssert, MethodName */
 package com.pfm.tests
 
 import spock.lang.Specification
@@ -32,7 +32,6 @@ class DeploymentFunctionsUnitTests extends Specification {
     private static final String SSH_REPO_URL = 'git@github.com:user/repo.git'
     private static final String MAIN_BRANCH = 'main'
     private static final String DEVELOP_BRANCH = 'develop'
-    private static final String FEATURE_BRANCH = 'feature/new-feature'
 
     // ============================================================================
     // AWS Constants
@@ -96,19 +95,18 @@ class DeploymentFunctionsUnitTests extends Specification {
     void testPrepareDockerImage(String repositoryUrl, String branch, String imageName) {
         given: 'captured commands'
         def capturedCommands = []
-        def buildDir = '/tmp/build-12345'
 
         // Handle both Map-based and String-based sh calls
         scriptMock.sh(_) >> { args ->
             String command = (args instanceof Map) ? args.script : args[0]
             capturedCommands << command
-            
-            if (command.contains('git clone')) return 0
-            if (command.contains('git checkout')) return 0
-            if (command.contains('git rev-parse')) return 'abc123def\n'
-            if (command.contains('docker build')) return 0
-            if (command.contains('docker push')) return 0
-            if (command.contains('rm -rf')) return 0
+
+            if (command.contains('git clone')) { return 0 }
+            if (command.contains('git checkout')) { return 0 }
+            if (command.contains('git rev-parse')) { return 'abc123def\n' }
+            if (command.contains('docker build')) { return 0 }
+            if (command.contains('docker push')) { return 0 }
+            if (command.contains('rm -rf')) { return 0 }
             return 0
         }
         // Mock readFile() to return the commit hash (simulating what was written to file)
@@ -122,7 +120,7 @@ class DeploymentFunctionsUnitTests extends Specification {
 
         then: 'returns the commit hash'
         result == 'abc123def'
-        
+
         and: 'commands executed in correct order'
         capturedCommands[0].contains("git clone ${repositoryUrl}")
         capturedCommands[1].contains("git checkout ${branch}")
@@ -139,7 +137,7 @@ class DeploymentFunctionsUnitTests extends Specification {
     }
 
     @Unroll('prepareDockerImage throws exception when #scenario')
-    void testPrepareDockerImageValidation(String repositoryUrl, String branch, String imageName, 
+    void testPrepareDockerImageValidation(String repositoryUrl, String branch, String imageName,
                                         Class<? extends Throwable> expectedException, String scenario) {
         when:
         deploymentFunctions.prepareDockerImage(repositoryUrl, branch, imageName)
@@ -160,15 +158,14 @@ class DeploymentFunctionsUnitTests extends Specification {
     void 'prepareDockerImage cleans up on docker build failure'() {
         given: 'git succeeds but docker fails'
         def capturedCommands = []
-        def buildDir = '/tmp/build-12345'
-        
+
         scriptMock.sh(_) >> { args ->
             String command = (args instanceof Map) ? args.script : args[0]
             capturedCommands << command
-            
-            if (command.contains('git clone')) return 0
-            if (command.contains('git checkout')) return 0
-            if (command.contains('git rev-parse')) return 'abc123def\n'
+
+            if (command.contains('git clone')) { return 0 }
+            if (command.contains('git checkout')) { return 0 }
+            if (command.contains('git rev-parse')) { return 'abc123def\n' }
             if (command.contains('docker build')) {
                 throw new Exception('Docker build failed')
             }
@@ -186,7 +183,7 @@ class DeploymentFunctionsUnitTests extends Specification {
 
         and: 'cleanup was called with the actual build directory'
         capturedCommands.any { it.contains("rm -rf /tmp/build-") }
-        
+
         and: 'commit hash file cleanup was also called'
         capturedCommands.any { it.contains('rm -f /tmp/commit-hash.txt') }
     }
@@ -204,7 +201,7 @@ class DeploymentFunctionsUnitTests extends Specification {
             def actualArgs = (args instanceof List && args.size() == 1) ? args[0] : args
             String command = (actualArgs instanceof Map) ? actualArgs.script : actualArgs.toString()
             capturedCommands << command
-            
+
             // Handle different return types based on returnStdout parameter
             if (actualArgs instanceof Map && actualArgs.containsKey('returnStdout') && actualArgs.returnStdout == true) {
                 // Return appropriate string values for AWS CLI queries
@@ -304,7 +301,7 @@ class DeploymentFunctionsUnitTests extends Specification {
                 return 0  // Return status code for regular sh calls
             }
         }
-        
+
         scriptMock.echo(_) >> { args -> loggedMessages << args[0] }
 
         when:
