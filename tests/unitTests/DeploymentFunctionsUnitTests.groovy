@@ -447,24 +447,21 @@ class DeploymentFunctionsUnitTests extends Specification {
         ANSIBLE_OPT_PATH  | HEALTH_CHECK_PLAYBOOK  | [:]
     }
 
-    @Unroll('runAnsiblePlaybook throws exception when #scenario')
-    void testRunAnsiblePlaybookValidation(String ansiblePath, String playbook, Map parameters,
-                                         Class<? extends Throwable> expectedException, String scenario) {
-        given:
-        deploymentFunctions.runAnsiblePlaybook(ansiblePath, playbook, parameters) >> { throw expectedException.newInstance() }
-
+    @Unroll('runAnsiblePlaybook validates input when #scenario')
+    void testRunAnsiblePlaybookValidation(String ansiblePath, String playbook, Map parameters, String scenario) {
         when:
         deploymentFunctions.runAnsiblePlaybook(ansiblePath, playbook, parameters)
 
         then:
-        thrown(expectedException)
+        thrown(IllegalArgumentException)
 
         where:
-        ansiblePath         | playbook                  | parameters | expectedException           | scenario
-        ''                  | DEPLOY_PLAYBOOK           | [:]        | IllegalArgumentException    | 'ansible path is empty'
-        ANSIBLE_PATH        | ''                        | [:]        | IllegalArgumentException    | 'playbook is empty'
-        ANSIBLE_PATH        | DEPLOY_PLAYBOOK           | null       | NullPointerException        | 'parameters is null'
-        ANSIBLE_PATH        | NON_EXISTENT_PLAYBOOK     | [:]        | FileNotFoundException       | 'playbook does not exist'
+        ansiblePath  | playbook        | parameters | scenario
+        null         | DEPLOY_PLAYBOOK | [:]        | 'ansible path is null'
+        ''           | DEPLOY_PLAYBOOK | [:]        | 'ansible path is empty'
+        ANSIBLE_PATH | null            | [:]        | 'playbook is null'
+        ANSIBLE_PATH | ''              | [:]        | 'playbook is empty'
+        ANSIBLE_PATH | DEPLOY_PLAYBOOK | null       | 'parameters is null'
     }
 
     // ============================================================================
