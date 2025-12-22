@@ -316,22 +316,60 @@ class DeploymentFunctionsUnitTests extends Specification {
     // Tests for validateStageIsUp()
     // ============================================================================
 
-    @Unroll('Validating if stage #stageName is up should return #expectedResult')
-    void testValidateStageIsUp(String stageName, Boolean expectedResult) {
-        given: 'mocked method returns expected result'
-        deploymentFunctions.validateStageIsUp(stageName) >> expectedResult
+    @Unroll('validateStageIsUp check if stage #stageName is #networkStatus')
+    void testValidateStageIsUp(String stageName, String networkStatus, Boolean expectedResult) {
+        given: 'network commands will return specific status'
+        def capturedCommands = []
+        scriptMock.sh(_) >> { args ->
+            // Handle the ArrayList wrapper properly
+            def actualArgs = (args instanceof List && args.size() == 1) ? args[0] : args
+            String command = (actualArgs instanceof Map) ? actualArgs.script : actualArgs.toString()
+            capturedCommands << command
+            
+            // Mock ping and SSH responses based on network status
+            if (command.contains('ping')) {
+                if (networkStatus == 'accessible') {
+                    return 0  // Success exit code
+                } else {
+                    return 1  // Failure exit code
+                }
+            }
+            
+            if (command.contains('nc') && command.contains('22')) {
+                if (networkStatus == 'accessible') {
+                    return 0  // SSH port accessible
+                } else {
+                    return 1  // SSH port not accessible
+                }
+            }
+            
+            return 0
+        }
+        scriptMock.echo(_) >> null
 
         when: 'validating if stage is up'
         boolean result = deploymentFunctions.validateStageIsUp(stageName)
 
-        then: 'returns expected result'
+        then: 'returns expected result based on network connectivity'
         result == expectedResult
+        
+        and: 'always performs ping check'
+        capturedCommands.any { it.contains("ping -c 3") && it.contains(stageName) }
+        
+        and: 'only performs SSH check when ping succeeds'
+        if (networkStatus == 'accessible') {
+            capturedCommands.any { it.contains("nc -zv -w 5") && it.contains(stageName) && it.contains("22") }
+        } else {
+            // When ping fails, SSH check should NOT be executed
+            !capturedCommands.any { it.contains("nc -zv -w 5") }
+        }
 
         where:
-        stageName   | expectedResult
-        STAGING_01  | true
-        STAGING_02  | false
-        IP_ADDRESS  | false
+        stageName   | networkStatus  | expectedResult
+        STAGING_01  | 'accessible'   | true
+        STAGING_02  | 'unreachable'  | false
+        IP_ADDRESS  | 'unreachable'  | false
+        DNS_NAME    | 'accessible'   | true
     }
 
     @Unroll('validateStageIsUp throws exception when #scenario')
