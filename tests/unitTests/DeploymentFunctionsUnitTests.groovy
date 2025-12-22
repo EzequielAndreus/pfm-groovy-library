@@ -5,7 +5,6 @@ import spock.lang.Specification
 import com.pfm.DeploymentFunctions
 
 import spock.lang.Unroll
-import helpers.AnsibleParametersBuilder
 
 /* groovylint-disable CompileStatic, JUnitPublicNonTestMethod */
 
@@ -57,29 +56,24 @@ class DeploymentFunctionsUnitTests extends Specification {
     private static final String ANSIBLE_OPT_PATH = '/opt/ansible'
     private static final String DEPLOY_PLAYBOOK = 'deploy.yml'
     private static final String HEALTH_CHECK_PLAYBOOK = 'health-check.yml'
-    private static final String CONFIGURE_PLAYBOOK = 'configure.yml'
-    private static final String NON_EXISTENT_PLAYBOOK = 'non-existent.yml'
 
     // ============================================================================
     // Docker Image Constants
     // ============================================================================
     private static final String DOCKER_IMAGE = 'myrepo/myimage:1.0.0'
     private static final String REGISTRY_IMAGE = 'registry/image:latest'
-    private static final String SHA256_IMAGE = 'myrepo/myimage@sha256:abc123def456'
 
     // ============================================================================
     // Environment Constants
     // ============================================================================
-    private static final String DEVELOPMENT_ENV = 'development'
     private static final String STAGING_ENV = 'staging'
     private static final String PRODUCTION_ENV = 'production'
-    private static final String TEST_ENV = 'test'
-    private static final String INVALID_ENV = 'invalid-env'
 
     // ============================================================================
     // Instance Fields
     // ============================================================================
     private DeploymentFunctions deploymentFunctions
+    /* groovylint-disable-next-line FieldTypeRequired */
     private def scriptMock
 
     void setup() {
@@ -94,6 +88,7 @@ class DeploymentFunctionsUnitTests extends Specification {
     @Unroll('#repositoryUrl with branch #branch should return valid commit hash')
     void testPrepareDockerImage(String repositoryUrl, String branch, String imageName) {
         given: 'captured commands'
+        /* groovylint-disable-next-line VariableTypeRequired */
         def capturedCommands = []
 
         // Handle both Map-based and String-based sh calls
@@ -125,7 +120,9 @@ class DeploymentFunctionsUnitTests extends Specification {
         capturedCommands[0].contains("git clone ${repositoryUrl}")
         capturedCommands[1].contains("git checkout ${branch}")
         capturedCommands[2].contains('git rev-parse --short HEAD')
-        capturedCommands.any { it.contains("docker build") && it.contains("-t ${imageName}:abc123def") }
+        capturedCommands.any {
+            it.contains('docker build') && it.contains("-t ${imageName}:abc123def")
+        }
         capturedCommands.any { it.contains("docker push ${imageName}:abc123def") }
         capturedCommands[-2].contains("rm -rf /tmp/build-")
         capturedCommands.last().contains("rm -f /tmp/commit-hash.txt")
@@ -199,11 +196,13 @@ class DeploymentFunctionsUnitTests extends Specification {
         scriptMock.sh(_) >> { args ->
             // Handle the ArrayList wrapper
             def actualArgs = (args instanceof List && args.size() == 1) ? args[0] : args
-            String command = (actualArgs instanceof Map) ? actualArgs.script : actualArgs.toString()
+            String command = (actualArgs instanceof Map) ?
+                actualArgs.script : actualArgs.toString()
             capturedCommands << command
 
             // Handle different return types based on returnStdout parameter
-            if (actualArgs instanceof Map && actualArgs.containsKey('returnStdout') && actualArgs.returnStdout == true) {
+            if (actualArgs instanceof Map && actualArgs.containsKey('returnStdout') &&
+                    actualArgs.returnStdout == true) {
                 // Return appropriate string values for AWS CLI queries
                 if (command.contains('DesiredCapacity')) {
                     return '2'  // Current capacity
@@ -289,7 +288,8 @@ class DeploymentFunctionsUnitTests extends Specification {
             String command = (actualArgs instanceof Map) ? actualArgs.script : actualArgs.toString()
             
             // Handle different return types based on returnStdout parameter
-            if (actualArgs instanceof Map && actualArgs.containsKey('returnStdout') && actualArgs.returnStdout == true) {
+            if (actualArgs instanceof Map && actualArgs.containsKey('returnStdout') &&
+                    actualArgs.returnStdout == true) {
                 // Return appropriate string values for AWS CLI queries
                 if (command.contains('DesiredCapacity')) {
                     return '2'  // Current capacity
@@ -540,7 +540,8 @@ class DeploymentFunctionsUnitTests extends Specification {
         capturedCommands.any { it.contains("docker tag") && it.contains(imageId) && it.contains(":${environment}") }
         
         // Check that we also create the environment-latest tag
-        capturedCommands.any { it.contains("docker tag") && it.contains(imageId) && it.contains(":${environment}-latest") }
+        capturedCommands.any { it.contains("docker tag") && it.contains(imageId) &&
+                            it.contains(":${environment}-latest") }
 
         where:
         imageId         | environment
