@@ -519,47 +519,50 @@ class DeploymentFunctionsUnitTests extends Specification {
     // Tests for tagImageForEnvironment()
     // ============================================================================
 
-    @Unroll('Tagging image #imageId for environment #environment should execute successfully')
-    void testTagImageForEnvironmentExecutesSuccessfully(String imageId, String environment) {
-        given: 'mocked method returns true'
-        deploymentFunctions.tagImageForEnvironment(imageId, environment) >> true
+    @Unroll('tagImageForEnvironment successfully tags #imageId for #environment')
+    void testTagImageForEnvironment(String imageId, String environment) {
+        given: 'Docker commands will succeed'
+        def capturedCommands = []
+        scriptMock.sh(_) >> { args ->
+            String command = (args instanceof Map) ? args.script : args[0]
+            capturedCommands << command
+            return 0
+        }
+        scriptMock.echo(_) >> null
 
-        when: 'tagging the image for the environment'
+        when:
         boolean result = deploymentFunctions.tagImageForEnvironment(imageId, environment)
 
-        then: 'tagging succeeds'
+        then:
         result == true
+        
+        // Check that we tag the image for the environment
+        capturedCommands.any { it.contains("docker tag") && it.contains(imageId) && it.contains(":${environment}") }
+        
+        // Check that we also create the environment-latest tag
+        capturedCommands.any { it.contains("docker tag") && it.contains(imageId) && it.contains(":${environment}-latest") }
 
         where:
         imageId         | environment
         DOCKER_IMAGE    | STAGING_ENV
-        DOCKER_IMAGE    | PRODUCTION_ENV
-        REGISTRY_IMAGE  | DEVELOPMENT_ENV
-        REGISTRY_IMAGE  | STAGING_ENV
         REGISTRY_IMAGE  | PRODUCTION_ENV
-        REGISTRY_IMAGE  | TEST_ENV
-        SHA256_IMAGE    | PRODUCTION_ENV
     }
 
-    @Unroll('tagImageForEnvironment throws exception when #scenario')
-    void testTagImageForEnvironmentValidation(String imageId, String environment,
-                                             Class<? extends Throwable> expectedException, String scenario) {
-        given:
-        deploymentFunctions.tagImageForEnvironment(imageId, environment) >> { throw expectedException.newInstance() }
-
+    @Unroll('tagImageForEnvironment validates input when #scenario')
+    void testTagImageForEnvironmentValidation(String imageId, String environment, String scenario) {
         when:
         deploymentFunctions.tagImageForEnvironment(imageId, environment)
 
         then:
-        thrown(expectedException)
+        thrown(IllegalArgumentException)
 
         where:
-        imageId             | environment           | expectedException           | scenario
-        ''                  | STAGING_ENV           | IllegalArgumentException    | 'image ID is empty'
-        DOCKER_IMAGE        | ''                    | IllegalArgumentException    | 'environment is empty'
-        DOCKER_IMAGE        | INVALID_ENV           | IllegalArgumentException    | 'environment is invalid'
-        null                | STAGING_ENV           | IllegalArgumentException    | 'image ID is null'
-        DOCKER_IMAGE        | null.toString()       | IllegalArgumentException    | 'environment is null'
+        imageId      | environment     | scenario
+        null         | STAGING_ENV     | 'image ID is null'
+        ''           | STAGING_ENV     | 'image ID is empty'
+        DOCKER_IMAGE | null            | 'environment is null'
+        DOCKER_IMAGE | ''              | 'environment is empty'
+        DOCKER_IMAGE | 'invalid-env'   | 'environment is invalid'
     }
 
 }
